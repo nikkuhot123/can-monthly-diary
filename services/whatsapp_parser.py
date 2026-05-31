@@ -489,11 +489,18 @@ def process_whatsapp_upload(
             db.add(target_diary)
             db.flush()
 
-        # Get existing dates for this diary
+        # Get existing dates for this diary — normalize to date objects
+        # (SQLite returns duty_date as strings; comparing date objects against
+        # strings always misses, causing UNIQUE constraint violations on re-upload)
         if target_diary.id not in processed_diaries:
-            existing_dates = {r.duty_date for r in db.query(AttendanceRecord).filter(
+            existing_dates = set()
+            for r in db.query(AttendanceRecord).filter(
                 AttendanceRecord.diary_id == target_diary.id,
-            ).all()}
+            ).all():
+                d = r.duty_date
+                if isinstance(d, str):
+                    d = date.fromisoformat(d)
+                existing_dates.add(d)
             processed_diaries[target_diary.id] = existing_dates
         existing_dates = processed_diaries[target_diary.id]
 
