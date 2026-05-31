@@ -208,6 +208,25 @@ def google_setup(
 
     # Lookup the staff_no in SQLite
     sqlite_user = db.query(User).filter(User.staff_no == staff_no).first()
+
+    if not sqlite_user and mobile:
+        # Fallback: user may have been auto-created by WhatsApp parser with a
+        # sequential staff_no. Try matching by mobile, then fix their staff_no.
+        import re as _re
+        norm_mobile = _re.sub(r'\D', '', mobile)
+        if norm_mobile.startswith('91') and len(norm_mobile) == 12:
+            norm_mobile = norm_mobile[2:]
+        norm_mobile = norm_mobile[-10:]
+        if norm_mobile:
+            candidate = db.query(User).filter(User.mobile.like(f'%{norm_mobile}')).first()
+            if candidate:
+                # Check no other user already has this staff_no
+                conflict = db.query(User).filter(User.staff_no == staff_no).first()
+                if not conflict:
+                    candidate.staff_no = staff_no
+                    db.commit()
+                sqlite_user = candidate
+
     if not sqlite_user:
         return templates.TemplateResponse("setup_account.html", {
             "request": request,
