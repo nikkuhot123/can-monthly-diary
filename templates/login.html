@@ -50,6 +50,19 @@ document.getElementById('google-signin-btn').addEventListener('click', async fun
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'id_token=' + encodeURIComponent(idToken)
         });
+
+        // Guard: server may return HTML (502, 504, nginx error) instead of JSON
+        const contentType = resp.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            const text = await resp.text();
+            console.error('Non-JSON response from server:', resp.status, text.substring(0, 200));
+            errorDiv.textContent = `Server error (${resp.status}). Check server logs.`;
+            errorDiv.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = 'Sign in with Google';
+            return;
+        }
+
         const data = await resp.json();
         if (data.needs_setup) {
             sessionStorage.setItem('temp_token', data.temp_token);
@@ -68,7 +81,7 @@ document.getElementById('google-signin-btn').addEventListener('click', async fun
             btn.innerHTML = 'Sign in with Google';
             return;
         }
-        errorDiv.textContent = 'Authentication failed: ' + error.message;
+        errorDiv.textContent = 'Sign-in failed: ' + error.message;
         errorDiv.classList.remove('d-none');
         btn.disabled = false;
         btn.innerHTML = 'Sign in with Google';

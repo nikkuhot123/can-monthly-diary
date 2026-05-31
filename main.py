@@ -50,6 +50,12 @@ app.include_router(admin.router,      prefix="/admin",      tags=["admin"])
 app.include_router(holidays.router,   prefix="/holidays",   tags=["holidays"])
 
 
+@app.get("/health")
+def health():
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"status": "ok"})
+
+
 @app.get("/")
 def root():
     return RedirectResponse(url="/auth/login")
