@@ -18,7 +18,9 @@
             Connect your Google account to your staff profile
         </p>
 
-        <div id="error-message" class="alert alert-danger d-none">{{ error or '' }}</div>
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
 
         <form method="POST" action="/auth/google-setup" class="form-audit">
             <input type="hidden" name="temp_token" id="temp_token_input">

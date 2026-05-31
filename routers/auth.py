@@ -101,10 +101,30 @@ def google_login(
     google_email = decoded.get("email", "")
 
     # Check if this Google account is already linked
-    user_link = get_user_link(google_uid)
+    try:
+        user_link = get_user_link(google_uid)
+    except Exception as e:
+        import traceback
+        print(f"[WARN] Firestore get_user_link failed: {e}\n{traceback.format_exc()}")
+        user_link = None
 
     if not user_link:
-        # First-time login — return a temp token for the setup page
+        # Firestore may have failed or this is a first-time login.
+        # Try to find user by email in SQLite as fallback.
+        sqlite_user = db.query(User).filter(User.email == google_email).first()
+        if sqlite_user:
+            # Email matched — log in directly without Firestore
+            is_admin = google_email in (e.strip() for e in ADMIN_EMAILS) or sqlite_user.is_admin
+            token = create_access_token({
+                "user_id": sqlite_user.id,
+                "staff_no": sqlite_user.staff_no,
+                "is_admin": is_admin,
+            })
+            response = JSONResponse({"redirect": "/attendance/dashboard"})
+            response.set_cookie(key="access_token", value=token, httponly=True, max_age=86400 * 30)
+            return response
+
+        # Genuine first-time login — redirect to setup
         temp_token = create_access_token({
             "google_uid": google_uid,
             "google_email": google_email,
@@ -191,15 +211,9 @@ def google_setup(
     if not sqlite_user:
         return templates.TemplateResponse("setup_account.html", {
             "request": request,
-            "error": f"No account found with Staff No: {staff_no}. Please contact your administrator.",
+            "error": f"Staff No {staff_no} not found. Contact your administrator.",
             "email": google_email,
         })
-
-    # Mobile verification: check if submitted mobile matches
-    if sqlite_user.mobile and sqlite_user.mobile.strip() != mobile.strip():
-        # Mobile mismatch — return warning but still allow link
-        # This is a soft check; user can proceed
-        pass  # In a more advanced version, we would return a warning page
 
     # Determine admin status from configured whitelist
     is_admin = google_email in (email.strip() for email in ADMIN_EMAILS)
@@ -209,8 +223,13 @@ def google_setup(
         sqlite_user.is_admin = True
         db.commit()
 
-    # Save user_link to Firestore
-    save_user_link(google_uid, google_email, staff_no, mobile, is_admin)
+    # Save user_link to Firestore — non-fatal if it fails
+    try:
+        save_user_link(google_uid, google_email, staff_no, mobile, is_admin)
+    except Exception as e:
+        import traceback
+        print(f"[WARN] Firestore save_user_link failed: {e}\n{traceback.format_exc()}")
+        # Proceed anyway — JWT session still works without Firestore link
 
     # Create JWT session
     token = create_access_token({
