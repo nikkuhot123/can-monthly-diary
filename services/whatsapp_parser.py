@@ -151,6 +151,25 @@ def split_messages(raw_text: str) -> List[Dict]:
             sender_mobile = ""
             sender_name = sender_line
 
+        # FALLBACK: For single-line format "Name: message" or "- Name: message",
+        # sender_line is empty and body contains the full line. Try to extract sender.
+        if not sender_line and not sender_mobile and body:
+            colon_match = re.match(r"^\s*(?:[-–—]+\s*)?(.+?)\s*:\s*", body)
+            if colon_match:
+                potential = colon_match.group(1).strip()
+                # Remove leading dash/space
+                potential = re.sub(r"^[-–—]+\s*", "", potential).strip()
+                if potential:
+                    # Check if it's a phone number
+                    phone_check = re.match(r"^\s*\+?91[\s\-]?\d[\d\s]{8,11}$", potential)
+                    if phone_check:
+                        sender_mobile = normalize_mobile(potential)
+                        sender_name = ""
+                    else:
+                        sender_name = potential
+                        # Remove sender prefix from body
+                        body = body[colon_match.end():].strip()
+
         messages.append({
             "msg_date": msg_date,
             "sender_name": sender_name,
@@ -316,11 +335,26 @@ def process_whatsapp_upload(
                     User.mobile.like(f"%{norm_mobile}")
                 ).first()
 
-        # Then try matching by name
+        # Then try matching by name tokens
         if not target_user and sender_name:
-            target_user = db.query(User).filter(
-                func.lower(User.name).contains(sender_name.lower())
-            ).first()
+            sender_words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
+                            if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from')]
+            for word in sender_words:
+                target_user = db.query(User).filter(
+                    func.lower(User.name).contains(word)
+                ).first()
+                if target_user:
+                    break
+
+        # Third fallback: search message body for staff numbers
+        if not target_user:
+            all_bodies = " ".join(m.get("body", "") + " " + m.get("full_text", "")
+                                 for m in msgs[:50])  # Check first 50 messages
+            found_staffs = re.findall(r'\b(\d{6})\b', all_bodies)
+            for sid in found_staffs:
+                target_user = db.query(User).filter(User.staff_no == sid).first()
+                if target_user:
+                    break
 
         # Skip senders who don't match any User
         if not target_user:
