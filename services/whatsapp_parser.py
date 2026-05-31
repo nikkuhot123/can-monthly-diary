@@ -327,32 +327,33 @@ def process_whatsapp_upload(
         sender_mobile = sample.get("sender_mobile", "")
         sender_name = sample.get("sender_name", "")
 
-        # First try matching by mobile
-        if sender_mobile:
+        # PRIMARY: Match by staff_no found in message bodies
+        all_text = " ".join(
+            m.get("body", "") + " " + m.get("full_text", "")
+            for m in msgs[:100]  # Check first 100 messages
+        )
+        found_staffs = set(re.findall(r'\b(\d{6})\b', all_text))
+        for sid in sorted(found_staffs):
+            target_user = db.query(User).filter(User.staff_no == sid).first()
+            if target_user:
+                break
+
+        # SECONDARY: Match by mobile number
+        if not target_user and sender_mobile:
             norm_mobile = normalize_mobile(sender_mobile)
             if norm_mobile:
                 target_user = db.query(User).filter(
                     User.mobile.like(f"%{norm_mobile}")
                 ).first()
 
-        # Then try matching by name tokens
+        # TERTIARY: Match by name tokens
         if not target_user and sender_name:
             sender_words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
-                            if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from')]
+                           if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from', 'this', 'that')]
             for word in sender_words:
                 target_user = db.query(User).filter(
                     func.lower(User.name).contains(word)
                 ).first()
-                if target_user:
-                    break
-
-        # Third fallback: search message body for staff numbers
-        if not target_user:
-            all_bodies = " ".join(m.get("body", "") + " " + m.get("full_text", "")
-                                 for m in msgs[:50])  # Check first 50 messages
-            found_staffs = re.findall(r'\b(\d{6})\b', all_bodies)
-            for sid in found_staffs:
-                target_user = db.query(User).filter(User.staff_no == sid).first()
                 if target_user:
                     break
 
