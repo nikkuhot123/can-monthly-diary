@@ -264,88 +264,187 @@ def process_whatsapp_upload(
     db, user_id: int, diary_id: int, file_content: str,
     staff_no: str, mobile_no: str = "", name_keywords: List[str] = None,
 ) -> dict:
-    from database.models import MonthlyDiary, AttendanceRecord
+    from database.models import User, MonthlyDiary, AttendanceRecord
     from services.calendar_utils import is_bank_holiday, get_bank_holiday_reason
-
-    if name_keywords is None:
-        name_keywords = []
-
-    parsed = parse_whatsapp_message(file_content, staff_no, mobile_no, name_keywords)
-    new_count = 0
-    duplicate_count = 0
-    leave_count = 0
-    review_count = 0
-    month_mismatch_count = 0
-
-    diary = db.query(MonthlyDiary).filter(MonthlyDiary.id == diary_id).first()
-    if not diary:
-        return {"total": 0, "new": 0, "duplicates": 0, "month_mismatch": 0,
-                "leaves_detected": 0, "leaves_filled": 0}
-
-    # Fetch existing dates into a set for fast lookup
-    existing_dates = {r.duty_date for r in db.query(AttendanceRecord).filter(
-        AttendanceRecord.diary_id == diary_id,
-    ).all()}
-
-    for data in parsed:
-        duty_date = data.get("duty_date")
-        if not duty_date:
-            continue
-        if duty_date.year != diary.year or duty_date.month != diary.month:
-            month_mismatch_count += 1
-            continue
-        if duty_date in existing_dates:
-            duplicate_count += 1
-            continue
-
-        bh_reason = get_bank_holiday_reason(duty_date)
-        wd = duty_date.weekday()
-
-        record = AttendanceRecord(
-            user_id=user_id, diary_id=diary_id, duty_date=duty_date,
-            branch_name=data.get("branch_name", ""),
-            dp_code=data.get("dp_code", ""),
-            audit_type=data.get("audit_type", ""),
-            place=data.get("place", ""),
-            mandays_sanctioned=data.get("mandays_sanctioned", 0),
-            mandays_pending=data.get("mandays_pending", 0),
-            mandays_utilised=data.get("mandays_utilised", 0),
-            executive_mandays=data.get("executive_mandays", 0),
-            date_of_commencement=data.get("date_of_commencement"),
-            is_holiday=(bh_reason is not None),
-            is_leave=data.get("is_leave", False),  # Respect the detected leave status
-            is_weekend=(wd >= 5 and bh_reason is None),
-            source="whatsapp",
-            raw_message=data.get("raw_message", ""),
-            is_duplicate=False,
-            needs_review=data.get("needs_review", False),
-            review_note=data.get("review_note", ""),
-        )
-        db.add(record)
-        existing_dates.add(duty_date)
-        new_count += 1
-        if record.is_leave:
-            leave_count += 1
-        if record.needs_review:
-            review_count += 1
-
-    leaves_filled = 0
+    from sqlalchemy import func
     from calendar import monthrange
-    _, dim = monthrange(diary.year, diary.month)
-    for day_num in range(1, dim + 1):
-        d = date(diary.year, diary.month, day_num)
-        if d in existing_dates:
+
+    # 1. Parse ALL messages from the WhatsApp chat
+    all_messages = split_messages(file_content)
+    if not all_messages:
+        return {"total_messages": 0, "total_new": 0, "total_duplicates": 0,
+                "total_leaves": 0, "total_review": 0, "total_users": 0,
+                "results_by_user": {}}
+
+    # 2. Get the admin's diary to know target month/year/bank_state
+    admin_diary = db.query(MonthlyDiary).filter(MonthlyDiary.id == diary_id).first()
+    if not admin_diary:
+        return {"total_messages": 0, "total_new": 0, "total_duplicates": 0,
+                "total_leaves": 0, "total_review": 0, "total_users": 0,
+                "results_by_user": {}}
+
+    target_month = admin_diary.month
+    target_year = admin_diary.year
+
+    # 3. Group messages by sender
+    sender_groups: Dict[str, List[Dict]] = {}
+    for msg in all_messages:
+        sender_key = msg.get("sender_name") or msg.get("sender_mobile") or "unknown"
+        sender_groups.setdefault(sender_key, []).append(msg)
+
+    total_new = 0
+    total_duplicates = 0
+    total_leaves = 0
+    total_review = 0
+    total_month_mismatch = 0
+    results_by_user: Dict[str, dict] = {}
+    processed_diaries: Dict[int, set] = {}  # diary_id -> set of existing dates
+
+    # 4. Process each sender group
+    for sender_key, msgs in sender_groups.items():
+        # Try to find a matching User in DB
+        target_user = None
+        sample = msgs[0]
+        sender_mobile = sample.get("sender_mobile", "")
+        sender_name = sample.get("sender_name", "")
+
+        # First try matching by mobile
+        if sender_mobile:
+            norm_mobile = normalize_mobile(sender_mobile)
+            if norm_mobile:
+                target_user = db.query(User).filter(
+                    User.mobile.like(f"%{norm_mobile}")
+                ).first()
+
+        # Then try matching by name
+        if not target_user and sender_name:
+            target_user = db.query(User).filter(
+                func.lower(User.name).contains(sender_name.lower())
+            ).first()
+
+        # Skip senders who don't match any User
+        if not target_user:
             continue
-        if is_bank_holiday(d):
-            continue
-        if d.weekday() >= 5:  # Skip Saturdays and Sundays
-            continue
-        db.add(AttendanceRecord(
-            user_id=user_id, diary_id=diary_id, duty_date=d,
-            source="auto", is_leave=True, needs_review=False,
-        ))
-        existing_dates.add(d)
-        leaves_filled += 1
+
+        # Get or create MonthlyDiary for this user
+        target_diary = db.query(MonthlyDiary).filter(
+            MonthlyDiary.user_id == target_user.id,
+            MonthlyDiary.month == target_month,
+            MonthlyDiary.year == target_year,
+        ).first()
+        if not target_diary:
+            target_diary = MonthlyDiary(
+                user_id=target_user.id,
+                month=target_month,
+                year=target_year,
+                bank_state=admin_diary.bank_state,
+                bank_gstin=admin_diary.bank_gstin,
+                status="draft",
+            )
+            db.add(target_diary)
+            db.flush()
+
+        # Get existing dates for this diary
+        if target_diary.id not in processed_diaries:
+            existing_dates = {r.duty_date for r in db.query(AttendanceRecord).filter(
+                AttendanceRecord.diary_id == target_diary.id,
+            ).all()}
+            processed_diaries[target_diary.id] = existing_dates
+        existing_dates = processed_diaries[target_diary.id]
+
+        user_new = 0
+        user_duplicates = 0
+        user_leaves = 0
+        user_review = 0
+
+        # Parse each message in the group
+        for msg in msgs:
+            parsed = parse_attendance_record(msg)
+            if not parsed:
+                continue
+
+            duty_date = parsed.get("duty_date")
+            if not duty_date:
+                continue
+
+            # Skip dates outside the target month/year
+            if duty_date.year != target_year or duty_date.month != target_month:
+                total_month_mismatch += 1
+                continue
+
+            # Skip duplicates
+            if duty_date in existing_dates:
+                total_duplicates += 1
+                user_duplicates += 1
+                continue
+
+            bh_reason = get_bank_holiday_reason(duty_date)
+            wd = duty_date.weekday()
+
+            record = AttendanceRecord(
+                user_id=target_user.id,
+                diary_id=target_diary.id,
+                duty_date=duty_date,
+                branch_name=parsed.get("branch_name", ""),
+                dp_code=parsed.get("dp_code", ""),
+                audit_type=parsed.get("audit_type", ""),
+                place=parsed.get("place", ""),
+                mandays_sanctioned=parsed.get("mandays_sanctioned", 0),
+                mandays_pending=parsed.get("mandays_pending", 0),
+                mandays_utilised=parsed.get("mandays_utilised", 0),
+                executive_mandays=parsed.get("executive_mandays", 0),
+                date_of_commencement=parsed.get("date_of_commencement"),
+                is_holiday=(bh_reason is not None),
+                is_leave=parsed.get("is_leave", False),
+                is_weekend=(wd >= 5 and bh_reason is None),
+                source="whatsapp",
+                raw_message=parsed.get("raw_message", ""),
+                is_duplicate=False,
+                needs_review=parsed.get("needs_review", False),
+                review_note=parsed.get("review_note", ""),
+            )
+            db.add(record)
+            existing_dates.add(duty_date)
+            total_new += 1
+            user_new += 1
+            if record.is_leave:
+                total_leaves += 1
+                user_leaves += 1
+            if record.needs_review:
+                total_review += 1
+                user_review += 1
+
+        # Fill missing weekdays as leave for this user's diary
+        user_leaves_filled = 0
+        _, dim = monthrange(target_year, target_month)
+        for day_num in range(1, dim + 1):
+            d = date(target_year, target_month, day_num)
+            if d in existing_dates:
+                continue
+            if is_bank_holiday(d):
+                continue
+            if d.weekday() >= 5:
+                continue
+            db.add(AttendanceRecord(
+                user_id=target_user.id,
+                diary_id=target_diary.id,
+                duty_date=d,
+                source="auto",
+                is_leave=True,
+                needs_review=False,
+            ))
+            existing_dates.add(d)
+            total_leaves += 1
+            user_leaves_filled += 1
+
+        results_by_user[sender_key] = {
+            "user_name": target_user.name,
+            "staff_no": target_user.staff_no,
+            "new": user_new,
+            "duplicates": user_duplicates,
+            "leaves": user_leaves_filled,
+            "needs_review": user_review,
+        }
 
     try:
         db.commit()
@@ -354,11 +453,11 @@ def process_whatsapp_upload(
         raise
 
     return {
-        "total": len(parsed),
-        "new": new_count,
-        "duplicates": duplicate_count,
-        "month_mismatch": month_mismatch_count,
-        "needs_review": review_count,
-        "leaves_detected": leave_count,
-        "leaves_filled": leaves_filled,
+        "total_messages": len(all_messages),
+        "total_new": total_new,
+        "total_duplicates": total_duplicates,
+        "total_leaves": total_leaves,
+        "total_review": total_review,
+        "total_users": len(results_by_user),
+        "results_by_user": results_by_user,
     }

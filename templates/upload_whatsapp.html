@@ -5,6 +5,46 @@
     <h2>Upload WhatsApp Attendance</h2>
     <a href="/attendance/calendar?diary_id={{ diary.id }}" class="pill-btn pill-outline">← Back to Calendar</a>
 </div>
+
+{% if error %}
+<div class="card-audit mt-3" style="border-left:4px solid var(--color-danger);">
+    <div class="card-body">
+        <p style="color:var(--color-danger);"><strong>Error:</strong> {{ error }}</p>
+    </div>
+</div>
+{% endif %}
+
+{% if result %}
+<div class="card-audit mt-3">
+    <div class="card-header-audit">Upload Results</div>
+    <div class="card-body">
+        <p>Total messages parsed: {{ result.total_messages }} | New records: {{ result.total_new }} | Users matched: {{ result.total_users }}</p>
+        <table class="table-audit">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>New</th>
+                    <th>Duplicates</th>
+                    <th>Leaves</th>
+                    <th>Needs Review</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for key, u in result.results_by_user.items() %}
+                <tr>
+                    <td>{{ u.user_name }} ({{ u.staff_no }})</td>
+                    <td>{{ u.new }}</td>
+                    <td>{{ u.duplicates }}</td>
+                    <td>{{ u.leaves }}</td>
+                    <td>{{ u.needs_review }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <div class="card-audit" style="max-width:600px;">
     <form method="POST" action="/attendance/upload-whatsapp" enctype="multipart/form-data" class="form-audit">
         <input type="hidden" name="diary_id" value="{{ diary.id }}">
