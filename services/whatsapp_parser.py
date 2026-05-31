@@ -489,20 +489,25 @@ def process_whatsapp_upload(
             db.add(target_diary)
             db.flush()
 
-        # Get existing dates for this diary — normalize to date objects
-        # (SQLite returns duty_date as strings; comparing date objects against
-        # strings always misses, causing UNIQUE constraint violations on re-upload)
+        # Get existing dates for this diary — split by source
+        # auto_leave_dates: dates with auto-filled leave (replaceable by real data)
+        # real_dates: dates with whatsapp/manual records (keep, skip on re-upload)
         if target_diary.id not in processed_diaries:
-            existing_dates = set()
+            real_dates = set()
+            auto_leave_dates = set()
             for r in db.query(AttendanceRecord).filter(
                 AttendanceRecord.diary_id == target_diary.id,
             ).all():
                 d = r.duty_date
                 if isinstance(d, str):
                     d = date.fromisoformat(d)
-                existing_dates.add(d)
-            processed_diaries[target_diary.id] = existing_dates
-        existing_dates = processed_diaries[target_diary.id]
+                if r.source == "auto":
+                    auto_leave_dates.add(d)
+                else:
+                    real_dates.add(d)
+            processed_diaries[target_diary.id] = (real_dates, auto_leave_dates)
+        real_dates, auto_leave_dates = processed_diaries[target_diary.id]
+        existing_dates = real_dates | auto_leave_dates
 
         user_new = 0
         user_duplicates = 0
@@ -524,11 +529,21 @@ def process_whatsapp_upload(
                 total_month_mismatch += 1
                 continue
 
-            # Skip duplicates
-            if duty_date in existing_dates:
+            # Real whatsapp/manual record already exists — skip
+            if duty_date in real_dates:
                 total_duplicates += 1
                 user_duplicates += 1
                 continue
+
+            # Auto-leave exists for this date — delete it so real record replaces it
+            if duty_date in auto_leave_dates:
+                db.query(AttendanceRecord).filter(
+                    AttendanceRecord.diary_id == target_diary.id,
+                    AttendanceRecord.duty_date == duty_date,
+                    AttendanceRecord.source == "auto",
+                ).delete(synchronize_session=False)
+                auto_leave_dates.discard(duty_date)
+                existing_dates.discard(duty_date)
 
             bh_reason = get_bank_holiday_reason(duty_date)
             wd = duty_date.weekday()
@@ -557,6 +572,7 @@ def process_whatsapp_upload(
             )
             db.add(record)
             existing_dates.add(duty_date)
+            real_dates.add(duty_date)
             total_new += 1
             user_new += 1
             if record.is_leave:
