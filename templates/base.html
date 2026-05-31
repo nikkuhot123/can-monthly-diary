@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Audit Diary System{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+    {% if user %}
+    <nav class="navbar navbar-expand-lg navbar-audit">
+        <div class="container">
+            <a class="navbar-brand" href="/attendance/dashboard">✦ Audit Diary</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/attendance/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/holidays/">Holidays</a></li>
+                    {% if user.is_admin %}
+                    <li class="nav-item"><a class="nav-link" href="/admin/users">Users</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/admin/diaries">All Diaries</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/admin/links">Linked Accounts</a></li>
+                    {% endif %}
+                </ul>
+                <span class="navbar-text me-3">{{ user.name }} ({{ user.staff_no }})</span>
+                <a href="/auth/profile" class="pill-btn pill-outline me-2">Profile</a>
+                <a href="/auth/logout" class="pill-btn pill-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div class="container mt-4 fade-in">
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show">{{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+        {% if success %}
+        <div class="alert alert-success alert-dismissible fade show">{{ success }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

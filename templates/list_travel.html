@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Travel - {{ diary.month }}/{{ diary.year }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Travel · {{ diary.month }}/{{ diary.year }}</h2>
+    <a href="/travel/add/{{ diary.id }}" class="pill-btn pill-gold">+ Add New</a>
+</div>
+{% if legs %}
+{% for r in legs %}
+<div class="card-audit expense-card">
+    <div class="expense-info">
+        <div class="expense-title">{{ r.from_place }} → {{ r.to_place }}</div>
+        <div class="expense-detail">{{ r.mode }} · {{ r.date_start }}</div>
+    </div>
+    <div class="expense-amount">₹{{ '%.2f'|format(r.total_amount) }}</div>
+    <div class="expense-actions">
+        <a href="/travel/edit/{{ r.id }}" class="pill-btn pill-warning" style="padding:2px 10px;">Edit</a>
+        <form method="POST" action="/travel/delete/{{ r.id }}" style="display:inline" onsubmit="return confirm('Delete this record?')">
+            <button type="submit" class="pill-btn pill-danger" style="padding:2px 10px;">Delete</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">🚗</div>
+    <div class="empty-text">No travel records. Click "+ Add New" to add one.</div>
+</div>
+{% endif %}
+{% endblock %}

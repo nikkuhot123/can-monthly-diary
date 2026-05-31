@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Upload WhatsApp{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Upload WhatsApp Attendance</h2>
+    <a href="/attendance/calendar?diary_id={{ diary.id }}" class="pill-btn pill-outline">← Back to Calendar</a>
+</div>
+<div class="card-audit" style="max-width:600px;">
+    <form method="POST" action="/attendance/upload-whatsapp" enctype="multipart/form-data" class="form-audit">
+        <input type="hidden" name="diary_id" value="{{ diary.id }}">
+        <div class="mb-3">
+            <label>Select WhatsApp Chat Export File</label>
+            <input type="file" name="file" class="form-control" accept=".txt" required>
+        </div>
+        <small style="color:var(--color-muted);">Upload the .txt file exported from WhatsApp chat.</small>
+        <div style="margin-top:16px;">
+            <button type="submit" class="pill-btn pill-primary">Upload &amp; Parse</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

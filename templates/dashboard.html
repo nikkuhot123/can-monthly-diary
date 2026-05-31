@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Audit Diary{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>My Monthly Diaries</h2>
+    <button class="pill-btn pill-gold" data-bs-toggle="modal" data-bs-target="#newMonthModal">+ New Month</button>
+</div>
+
+{% if diaries %}
+{% for d in diaries %}
+<div class="card-audit diary-card border-{% if d.status == 'draft' %}draft{% elif d.status == 'submitted' %}submitted{% else %}reviewed{% endif %}">
+    <div class="diary-info">
+        <div class="diary-month">{{ d.month }}/{{ d.year }}</div>
+        <div class="diary-meta">{{ d.bank_state }} · Last updated {{ (d.updated_at or d.created_at).strftime('%d-%b-%Y') }}</div>
+    </div>
+    <div>
+        <span class="status-badge badge-{% if d.status == 'draft' %}draft{% elif d.status == 'submitted' %}submitted{% else %}reviewed{% endif %}">{{ d.status|title }}</span>
+    </div>
+    <div class="diary-total">₹{{ '%.2f'|format(d.grand_total or 0) }}</div>
+    <div class="diary-actions">
+        <a href="/attendance/calendar?diary_id={{ d.id }}" class="pill-btn pill-primary">Calendar</a>
+        <a href="/generate/preview/{{ d.id }}" class="pill-btn pill-info">Preview</a>
+        <a href="/generate/download-excel/{{ d.id }}" class="pill-btn pill-success">Excel</a>
+        <a href="/generate/download-hrms/{{ d.id }}" class="pill-btn pill-outline">HRMS</a>
+        <a href="/attendance/edit-diary/{{ d.id }}" class="pill-btn pill-warning">Edit</a>
+        <form method="POST" action="/attendance/delete-diary/{{ d.id }}" style="display:inline" onsubmit="return confirm('Delete this diary and ALL its data? This cannot be undone.')">
+            <button type="submit" class="pill-btn pill-danger">Delete</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-text">No diaries yet. Click "+ New Month" to start.</div>
+</div>
+{% endif %}
+
+<!-- New Month Modal -->
+<div class="modal fade" id="newMonthModal">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:12px;">
+            <form method="POST" action="/attendance/new-month">
+                <div class="modal-header" style="background:var(--color-navy-900);color:#fff;border-radius:12px 12px 0 0;">
+                    <h5 class="modal-title" style="color:var(--color-gold);">Start New Month</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Month</label>
+                        <select name="month" class="form-select">
+                            {% for m in range(1, 13) %}
+                            <option value="{{ m }}" {% if m == now.month %}selected{% endif %}>{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Year</label>
+                        <select name="year" class="form-select">
+                            {% for y in range(now.year - 1, now.year + 2) %}
+                            <option value="{{ y }}" {% if y == now.year %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bank State</label>
+                        <select name="bank_state" class="form-select">
+                            <option value="Maharashtra">Maharashtra</option>
+                            <option value="Karnataka">Karnataka</option>
+                            <option value="Delhi">Delhi</option>
+                            <option value="Gujarat">Gujarat</option>
+                            <option value="Madhya Pradesh">Madhya Pradesh</option>
+                            <option value="Tamil Nadu">Tamil Nadu</option>
+                            <option value="Uttar Pradesh">Uttar Pradesh</option>
+                            <option value="Rajasthan">Rajasthan</option>
+                            <option value="Kerala">Kerala</option>
+                            <option value="Telangana">Telangana</option>
+                            <option value="West Bengal">West Bengal</option>
+                            <option value="Bihar">Bihar</option>
+                            <option value="Punjab">Punjab</option>
+                            <option value="Haryana">Haryana</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="pill-btn pill-gold">Create Diary</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

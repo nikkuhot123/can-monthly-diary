@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Hotels - {{ diary.month }}/{{ diary.year }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Hotels · {{ diary.month }}/{{ diary.year }}</h2>
+    <a href="/hotel/add/{{ diary.id }}" class="pill-btn pill-gold">+ Add New</a>
+</div>
+{% if stays %}
+{% for r in stays %}
+<div class="card-audit expense-card">
+    <div class="expense-info">
+        <div class="expense-title">{{ r.hotel_name }}, {{ r.city }}</div>
+        <div class="expense-detail">{{ r.checkin_date }} → {{ r.checkout_date }}</div>
+    </div>
+    <div class="expense-amount">₹{{ '%.2f'|format(r.total_lb) }}</div>
+    <div class="expense-actions">
+        <a href="/hotel/edit/{{ r.id }}" class="pill-btn pill-warning" style="padding:2px 10px;">Edit</a>
+        <form method="POST" action="/hotel/delete/{{ r.id }}" style="display:inline" onsubmit="return confirm('Delete this record?')">
+            <button type="submit" class="pill-btn pill-danger" style="padding:2px 10px;">Delete</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">🏨</div>
+    <div class="empty-text">No hotel records. Click "+ Add New" to add one.</div>
+</div>
+{% endif %}
+{% endblock %}

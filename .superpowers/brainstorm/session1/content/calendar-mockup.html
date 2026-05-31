@@ -1,0 +1,164 @@
+<h2>📅 Calendar View — Redesigned</h2>
+<p class="subtitle">Modern card-based calendar with clean day cells</p>
+
+<div class="mockup" style="margin-bottom: 16px;">
+  <div class="mockup-header" style="background: #0a1628; color: #d4a843; display: flex; justify-content: space-between; padding: 10px 16px; align-items: center;">
+    <span style="font-weight: 600;">Audit Diary</span>
+    <div>
+      <span style="color: #9ca3af; font-size: 0.75rem; margin-right: 12px;">👤 Rahul Sharma</span>
+      <span style="border: 1px solid #d4a843; color: #d4a843; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem;">Logout</span>
+    </div>
+  </div>
+  
+  <div class="mockup-body" style="padding: 20px; background: #f0f2f5;">
+    <!-- Month header + actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+      <div>
+        <h3 style="margin: 0; color: #0a1628; font-size: 1.3rem;">📅 May 2026</h3>
+        <span style="color: #6b7280; font-size: 0.8rem;">Maharashtra | GSTIN: 27AAACC6106G4ZY</span>
+      </div>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <span style="background: white; border: 1px solid #d4a843; color: #0a1628; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">+ Add Manually</span>
+        <span style="background: #0a1628; color: white; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">Preview</span>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 0.7rem;">
+      <span style="display: flex; align-items: center; gap: 4px;">
+        <span style="width: 10px; height: 10px; background: #dcfce7; border-radius: 2px; display: inline-block;"></span> Present
+      </span>
+      <span style="display: flex; align-items: center; gap: 4px;">
+        <span style="width: 10px; height: 10px; background: #fef9c3; border-radius: 2px; display: inline-block;"></span> Leave / Review
+      </span>
+      <span style="display: flex; align-items: center; gap: 4px;">
+        <span style="width: 10px; height: 10px; background: #dbeafe; border-radius: 2px; display: inline-block;"></span> Holiday
+      </span>
+      <span style="display: flex; align-items: center; gap: 4px;">
+        <span style="width: 10px; height: 10px; background: #f1f5f9; border-radius: 2px; display: inline-block;"></span> Weekend
+      </span>
+    </div>
+
+    <!-- Calendar grid -->
+    <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+      <!-- Day headers -->
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px;">
+        <div style="text-align: center; font-weight: 600; color: #0a1628; font-size: 0.7rem; padding: 4px;">Mon</div>
+        <div style="text-align: center; font-weight: 600; color: #0a1628; font-size: 0.7rem; padding: 4px;">Tue</div>
+        <div style="text-align: center; font-weight: 600; color: #0a1628; font-size: 0.7rem; padding: 4px;">Wed</div>
+        <div style="text-align: center; font-weight: 600; color: #0a1628; font-size: 0.7rem; padding: 4px;">Thu</div>
+        <div style="text-align: center; font-weight: 600; color: #0a1628; font-size: 0.7rem; padding: 4px;">Fri</div>
+        <div style="text-align: center; font-weight: 600; color: #d4a843; font-size: 0.7rem; padding: 4px;">Sat</div>
+        <div style="text-align: center; font-weight: 600; color: #ef4444; font-size: 0.7rem; padding: 4px;">Sun</div>
+      </div>
+
+      <!-- Week 1 -->
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+        <div style="background: #f1f5f9; border-radius: 8px; min-height: 65px; padding: 6px; text-align: center;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #94a3b8;">28</div>
+          <div style="font-size: 0.6rem; color: #94a3b8;">(prev)</div>
+        </div>
+        <div style="background: #f1f5f9; border-radius: 8px; min-height: 65px; padding: 6px; text-align: center;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #94a3b8;">29</div>
+          <div style="font-size: 0.6rem; color: #94a3b8;">(prev)</div>
+        </div>
+        <div style="background: #f1f5f9; border-radius: 8px; min-height: 65px; padding: 6px; text-align: center;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #94a3b8;">30</div>
+          <div style="font-size: 0.6rem; color: #94a3b8;">(prev)</div>
+        </div>
+        <div style="background: #dcfce7; border-radius: 8px; min-height: 65px; padding: 6px; border: 1px solid #86efac;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #0a1628;">1</div>
+          <div style="font-size: 0.6rem; color: #16a34a;">Present</div>
+          <div style="font-size: 0.55rem; color: #4b5563; margin-top: 2px;">Main Branch</div>
+        </div>
+        <div style="background: #dcfce7; border-radius: 8px; min-height: 65px; padding: 6px; border: 1px solid #86efac;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #0a1628;">2</div>
+          <div style="font-size: 0.6rem; color: #16a34a;">Present</div>
+          <div style="font-size: 0.55rem; color: #4b5563; margin-top: 2px;">Zonal Office</div>
+        </div>
+        <div style="background: #dcfce7; border-radius: 8px; min-height: 65px; padding: 6px; border: 1px solid #86efac;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #0a1628;">3</div>
+          <div style="font-size: 0.6rem; color: #16a34a;">Present</div>
+        </div>
+        <div style="background: #dbeafe; border-radius: 8px; min-height: 65px; padding: 6px; border: 1px solid #93c5fd;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #1e40af;">4</div>
+          <div style="font-size: 0.6rem; color: #1e40af;">Sunday</div>
+        </div>
+      </div>
+
+      <!-- Week 2 -->
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 4px;">
+        <div style="background: #dcfce7; border-radius: 8px; min-height: 65px; padding: 6px; border: 1px solid #86efac;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #0a1628;">5</div>
+          <div style="font-size: 0.6rem; color: #16a34a;">Present</div>
+        </div>
+        <div style="background: #fef9c3; border-radius: 8px; min-height: 65px; padding: 6px; border: 1px solid #fde047;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #0a1628;">6</div>
+          <div style="font-size: 0.6rem; color: #a16207;">Leave</div>
+        </div>
+        <div style="background: #dcfce7; border-radius: 8px; min-height: 65px; padding: 6px; border: 1px solid #86efac;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #0a1628;">7</div>
+          <div style="font-size: 0.6rem; color: #16a34a;">Present</div>
+        </div>
+        <div style="background: #dcfce7; border-radius: 8px; min-height: 65px; padding: 6px;">
+          <div style="font-size: 0.75rem; font-weight: 600;">8</div>
+          <div style="font-size: 0.6rem; color: #16a34a;">Present</div>
+        </div>
+        <div style="background: #dcfce7; border-radius: 8px; min-height: 65px; padding: 6px;">
+          <div style="font-size: 0.75rem; font-weight: 600;">9</div>
+          <div style="font-size: 0.6rem; color: #16a34a;">Present</div>
+        </div>
+        <div style="background: #dcfce7; border-radius: 8px; min-height: 65px; padding: 6px;">
+          <div style="font-size: 0.75rem; font-weight: 600;">10</div>
+          <div style="font-size: 0.6rem; color: #16a34a;">Present</div>
+        </div>
+        <div style="background: #dbeafe; border-radius: 8px; min-height: 65px; padding: 6px; border: 1px solid #93c5fd;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: #1e40af;">11</div>
+          <div style="font-size: 0.6rem; color: #1e40af;">Sunday</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin toolbar -->
+<div class="mockup" style="margin-bottom: 16px;">
+  <div class="mockup-header" style="background: #0a1628; color: white; padding: 10px 16px; font-weight: 500; font-size: 0.8rem;">
+    🔧 Admin Tools (visible only for admin users)
+  </div>
+  <div class="mockup-body" style="padding: 14px; background: #f8fafc;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <span style="background: #dcfce7; color: #166534; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">📤 Upload WhatsApp</span>
+      <span style="background: #fef9c3; color: #92400e; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">📊 Compute Leaves</span>
+      <span style="background: #eef2ff; color: #4338ca; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">✈️ Travel</span>
+      <span style="background: #eef2ff; color: #4338ca; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">🏨 Hotel</span>
+      <span style="background: #eef2ff; color: #4338ca; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">🚌 Local</span>
+      <span style="background: #eef2ff; color: #4338ca; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">📄 Other</span>
+      <span style="background: #fef9c3; color: #92400e; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">🧾 Bills</span>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>What's New</h4>
+    <ul>
+      <li>CSS Grid calendar (not HTML table) — responsive & flexible</li>
+      <li>Color-coded cells: green=Present, yellow=Leave, blue=Holiday, gray=Weekend</li>
+      <li>Branch name shown in cell for present days</li>
+      <li>Admin tools as pill buttons above calendar</li>
+      <li>Clean month header with status info</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>Mobile Friendly</h4>
+    <ul>
+      <li>Grid cells stack smaller on mobile</li>
+      <li>Admin pills wrap naturally</li>
+      <li>No horizontal scroll needed</li>
+      <li>Touch-friendly pill buttons</li>
+    </ul>
+  </div>
+</div>
+
+<p style="margin-top: 1rem; color: #666;">✅ Does the calendar design look good? Let me know in the terminal.</p>

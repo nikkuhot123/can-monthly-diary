@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Edit Other Expense{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Edit Other Expense</h2>
+    <a href="/other/list/{{ item.diary_id }}" class="pill-btn pill-outline">← Back to Other</a>
+</div>
+<div class="card-audit" style="max-width:700px;">
+    <form method="POST" action="/other/edit/{{ item.id }}" class="form-audit">
+        <div class="mb-3">
+            <label>Description</label>
+            <input type="text" name="expense_description" class="form-control" value="{{ item.expense_description }}" required>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Invoice Date</label>
+                <input type="date" name="invoice_date" class="form-control" value="{{ item.invoice_date or '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Amount (₹ excl GST)</label>
+                <input type="number" step="0.01" name="claimed_amount_exc_gst" class="form-control" value="{{ item.claimed_amount_exc_gst or 0 }}" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>GST Percent</label>
+                <input type="number" step="0.01" name="gst_percent" class="form-control" value="{{ item.gst_percent or 0 }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Declaration Amount (₹)</label>
+                <input type="number" step="0.01" name="declaration_amount" class="form-control" value="{{ item.declaration_amount or 0 }}">
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button type="submit" class="pill-btn pill-primary">Update</button>
+            <a href="/other/list/{{ item.diary_id }}" class="pill-btn pill-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

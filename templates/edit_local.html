@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Edit Local Conveyance{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Edit Local Conveyance</h2>
+    <a href="/local/list/{{ item.diary_id }}" class="pill-btn pill-outline">← Back to Local</a>
+</div>
+<div class="card-audit" style="max-width:700px;">
+    <form method="POST" action="/local/edit/{{ item.id }}" class="form-audit">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>From Place</label>
+                <input type="text" name="from_place" class="form-control" value="{{ item.from_place }}" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>To Place</label>
+                <input type="text" name="to_place" class="form-control" value="{{ item.to_place }}" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label>Mode</label>
+                <select name="mode" class="form-select">
+                    <option value="Bus" {% if item.mode == 'Bus' %}selected{% endif %}>Bus</option>
+                    <option value="Taxi" {% if item.mode == 'Taxi' %}selected{% endif %}>Taxi</option>
+                    <option value="Auto" {% if item.mode == 'Auto' %}selected{% endif %}>Auto</option>
+                    <option value="Own Vehicle" {% if item.mode == 'Own Vehicle' %}selected{% endif %}>Own Vehicle</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Distance (km)</label>
+                <input type="number" step="0.1" name="distance_km" class="form-control" value="{{ item.distance_km or 0 }}" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Date</label>
+                <input type="date" name="travel_date" class="form-control" value="{{ item.travel_date }}" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Amount (₹)</label>
+                <input type="number" step="0.01" name="claimed_amount_exc_gst" class="form-control" value="{{ item.claimed_amount_exc_gst or 0 }}" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>GST Percent</label>
+                <input type="number" step="0.01" name="gst_percent" class="form-control" value="{{ item.gst_percent or 0 }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Vendor GSTIN</label>
+                <input type="text" name="vendor_gstin" class="form-control" value="{{ item.vendor_gstin or '' }}">
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button type="submit" class="pill-btn pill-primary">Update</button>
+            <a href="/local/list/{{ item.diary_id }}" class="pill-btn pill-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

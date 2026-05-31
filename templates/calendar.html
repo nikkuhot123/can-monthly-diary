@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Calendar - {{ month }}/{{ year }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>{{ month_name }} {{ year }}</h2>
+        <small style="color:var(--color-muted);">{{ diary.bank_state or 'N/A' }} · GSTIN: {{ diary.bank_gstin or 'N/A' }}</small>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/attendance/add/{{ diary.id }}" class="pill-btn pill-primary">+ Add Manually</a>
+        <a href="/generate/preview/{{ diary.id }}" class="pill-btn pill-info">Preview</a>
+        {% if user.is_admin %}
+        <a href="/attendance/upload-whatsapp?diary_id={{ diary.id }}" class="pill-btn pill-success">Upload WhatsApp</a>
+        <form method="POST" action="/attendance/compute-leaves/{{ diary.id }}" style="display:inline">
+            <button type="submit" class="pill-btn pill-warning">Compute Leaves</button>
+        </form>
+        <a href="/travel/list/{{ diary.id }}" class="pill-btn pill-outline">Travel</a>
+        <a href="/hotel/list/{{ diary.id }}" class="pill-btn pill-outline">Hotel</a>
+        <a href="/local/list/{{ diary.id }}" class="pill-btn pill-outline">Local</a>
+        <a href="/other/list/{{ diary.id }}" class="pill-btn pill-outline">Other</a>
+        <a href="/bills/list/{{ diary.id }}" class="pill-btn pill-outline">Bills</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:#d1fae5;border-color:#6ee7b7;"></span> Present</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#fee2e2;border-color:#fca5a5;"></span> Leave</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#dbeafe;border-color:#60a5fa;"></span> Holiday</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#f1f5f9;"></span> Weekend</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#fff;border:1px dashed #d1d5db;"></span> Missing</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#ffedd5;border-color:#fb923c;"></span> Review</span>
+</div>
+
+<div class="calendar-grid">
+    <div class="calendar-header-cell">Sun</div>
+    <div class="calendar-header-cell">Mon</div>
+    <div class="calendar-header-cell">Tue</div>
+    <div class="calendar-header-cell">Wed</div>
+    <div class="calendar-header-cell">Thu</div>
+    <div class="calendar-header-cell">Fri</div>
+    <div class="calendar-header-cell">Sat</div>
+    {% for week in weeks %}
+    {% for day in week %}
+    {% if day %}
+    <div class="calendar-cell {{ day.css }}">
+        <div class="day-number">{{ day.day }}</div>
+        <div class="status-label">{{ day.day_type }}</div>
+        {% if day.holiday %}
+        <div class="status-label" style="font-size:0.7rem;">{{ day.holiday }}</div>
+        {% endif %}
+        {% if day.record and day.record.branch_name %}
+        <div class="branch-name">{{ day.record.branch_name }}</div>
+        {% endif %}
+        {% if day.record %}
+        <a href="/attendance/edit/{{ day.record.id }}" class="pill-btn pill-outline" style="padding:3px 10px;font-size:0.7rem;margin-top:4px;">Edit</a>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="calendar-cell" style="background:transparent;border:none;min-height:0;"></div>
+    {% endif %}
+    {% endfor %}
+    {% endfor %}
+</div>
+{% endblock %}

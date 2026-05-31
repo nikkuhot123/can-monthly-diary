@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Preview - {{ diary.month }}/{{ diary.year }}{% endblock %}
+
+{% set ns = namespace(travel_total=0, hotel_total=0, local_other_total=0) %}
+{% for t in travel %}{% set ns.travel_total = ns.travel_total + (t.total_amount or 0) %}{% endfor %}
+{% for h in hotels %}{% set ns.hotel_total = ns.hotel_total + (h.total_claimed_exc_gst or h.total_lb or 0) %}{% endfor %}
+{% for l in local %}{% set ns.local_other_total = ns.local_other_total + (l.claimed_amount_exc_gst or 0) + (l.claimed_gst or 0) %}{% endfor %}
+{% for o in other %}{% set ns.local_other_total = ns.local_other_total + (o.claimed_amount_exc_gst or 0) + (o.claimed_gst or 0) %}{% endfor %}
+{% set grand_total = ns.travel_total + ns.hotel_total + ns.local_other_total %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Preview: {{ month_name or (diary.month ~ '/' ~ diary.year) }}</h2>
+    <div style="display:flex;gap:8px;">
+        <a href="/generate/download-excel/{{ diary.id }}" class="pill-btn pill-success">Download TA Excel</a>
+        <a href="/generate/download-hrms/{{ diary.id }}" class="pill-btn pill-outline">Download HRMS Excel</a>
+        <form method="POST" action="/generate/submit/{{ diary.id }}" style="display:inline">
+            <button type="submit" class="pill-btn pill-gold">Submit Diary</button>
+        </form>
+    </div>
+</div>
+
+<div class="card-audit border-draft mb-4">
+    <div class="row">
+        <div class="col-md-3"><strong>Staff:</strong> {{ user.name }}</div>
+        <div class="col-md-2"><strong>No:</strong> {{ user.staff_no }}</div>
+        <div class="col-md-3"><strong>Designation:</strong> {{ user.designation or 'N/A' }}</div>
+        <div class="col-md-2"><strong>Section:</strong> {{ user.section or 'N/A' }}</div>
+        <div class="col-md-2"><strong>Zone:</strong> {{ user.zone or 'N/A' }}</div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-6 col-md-3 mb-3">
+        <div class="stat-card"><div class="stat-label">Travel</div><div class="stat-value">₹{{ '%.2f'|format(ns.travel_total) }}</div></div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="stat-card"><div class="stat-label">Lodging</div><div class="stat-value">₹{{ '%.2f'|format(ns.hotel_total) }}</div></div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="stat-card"><div class="stat-label">Local + Other</div><div class="stat-value">₹{{ '%.2f'|format(ns.local_other_total) }}</div></div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="stat-card stat-card-navy"><div class="stat-label">Grand Total</div><div class="stat-value" style="color:var(--color-gold);">₹{{ '%.2f'|format(grand_total) }}</div></div>
+    </div>
+</div>
+
+<div class="card-audit mb-4">
+    <h5 style="margin-bottom:12px;">Attendance ({{ attendance|length }} days)</h5>
+    <div class="mini-calendar">
+        {% for a in attendance %}
+        {% set color_class = 'present' if not a.is_leave and not a.is_holiday else ('leave' if a.is_leave else 'holiday') %}
+        <div class="mini-day mini-{{ color_class }}" title="{{ a.duty_date }}: {{ color_class|title }}"></div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card-audit mb-4">
+    <h5 style="margin-bottom:12px;">Travel</h5>
+    {% if travel %}
+    {% for t in travel %}
+    <div class="expense-card" style="border-left:3px solid var(--color-info);margin-bottom:4px;">
+        <div class="expense-info">
+            <div class="expense-title">{{ t.from_place }} → {{ t.to_place }}</div>
+            <div class="expense-detail">{{ t.mode }} · {{ t.date_start }}</div>
+        </div>
+        <div class="expense-amount">₹{{ '%.2f'|format(t.total_amount or 0) }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color:var(--color-muted);margin:0;">No travel records.</p>
+    {% endif %}
+</div>
+
+<div class="card-audit mb-4">
+    <h5 style="margin-bottom:12px;">Hotels</h5>
+    {% if hotels %}
+    {% for h in hotels %}
+    <div class="expense-card" style="border-left:3px solid var(--color-warning);margin-bottom:4px;">
+        <div class="expense-info">
+            <div class="expense-title">{{ h.hotel_name }}, {{ h.city }}</div>
+            <div class="expense-detail">{{ h.checkin_date }} → {{ h.checkout_date }}</div>
+        </div>
+        <div class="expense-amount">₹{{ '%.2f'|format(h.total_claimed_exc_gst or h.total_lb or 0) }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color:var(--color-muted);margin:0;">No hotel records.</p>
+    {% endif %}
+</div>
+
+<div class="card-audit mb-4">
+    <h5 style="margin-bottom:12px;">Local &amp; Other</h5>
+    {% if local or other %}
+    {% for l in local %}
+    <div class="expense-card" style="border-left:3px solid var(--color-success);margin-bottom:4px;">
+        <div class="expense-info">
+            <div class="expense-title">{{ l.from_place }} → {{ l.to_place }}</div>
+            <div class="expense-detail">{{ l.mode }} · {{ l.distance_km }} km</div>
+        </div>
+        <div class="expense-amount">₹{{ '%.2f'|format(l.claimed_amount_exc_gst or 0) }}</div>
+    </div>
+    {% endfor %}
+    {% for o in other %}
+    <div class="expense-card" style="border-left:3px solid var(--color-muted);margin-bottom:4px;">
+        <div class="expense-info">
+            <div class="expense-title">{{ o.expense_description }}</div>
+            <div class="expense-detail">{{ o.invoice_date or '' }}</div>
+        </div>
+        <div class="expense-amount">₹{{ '%.2f'|format(o.claimed_amount_exc_gst or 0) }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color:var(--color-muted);margin:0;">No local or other records.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Register - Audit Diary{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4">Register New User</h3>
+                <form method="POST" action="/auth/register">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Staff Number *</label>
+                            <input type="text" name="staff_no" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Name *</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email *</label>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Mobile Number</label>
+                            <input type="tel" name="mobile" class="form-control" inputmode="numeric" pattern="[0-9+\-\s]{10,15}" placeholder="10 digit mobile number">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Password *</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Designation</label>
+                            <input type="text" name="designation" class="form-control" value="Senior Manager">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">DP Code</label>
+                            <input type="text" name="dp_code" class="form-control" value="55265">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Section</label>
+                            <input type="text" name="section" class="form-control" value="ZI MUMBAI UNIT NASHIK">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Zone</label>
+                            <input type="text" name="zone" class="form-control" value="ZI MUMBAI">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Basic Pay</label>
+                            <input type="number" step="0.01" name="basic_pay" class="form-control" value="105280">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Home State</label>
+                            <select name="home_state" class="form-select">
+                                <option value="Maharashtra">Maharashtra</option>
+                                <option value="Karnataka">Karnataka</option>
+                                <option value="Delhi">Delhi</option>
+                                <option value="Gujarat">Gujarat</option>
+                                <option value="Madhya Pradesh">Madhya Pradesh</option>
+                                <option value="Tamil Nadu">Tamil Nadu</option>
+                                <option value="Uttar Pradesh">Uttar Pradesh</option>
+                                <option value="Rajasthan">Rajasthan</option>
+                                <option value="Kerala">Kerala</option>
+                                <option value="Telangana">Telangana</option>
+                                <option value="West Bengal">West Bengal</option>
+                                <option value="Bihar">Bihar</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="pill-btn pill-gold w-100">Register</button>
+                </form>
+                <p class="text-center mt-3">
+                    <a href="/auth/login">Already registered? Login here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

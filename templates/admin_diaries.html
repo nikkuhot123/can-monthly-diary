@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}All Diaries - Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>All Diaries</h2>
+</div>
+<div class="card-audit">
+    {% if diaries %}
+    <div class="table-responsive">
+        <table class="table table-audit">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Month</th>
+                    <th>Bank State</th>
+                    <th>Status</th>
+                    <th>Grand Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in diaries %}
+                <tr>
+                    <td>{{ d.user.name if d.user else 'User #' ~ d.user_id }}</td>
+                    <td>{{ d.month }}/{{ d.year }}</td>
+                    <td>{{ d.bank_state }}</td>
+                    <td><span class="status-badge badge-{% if d.status == 'draft' %}draft{% elif d.status == 'submitted' %}submitted{% else %}reviewed{% endif %}">{{ d.status|title }}</span></td>
+                    <td>₹{{ '%.2f'|format(d.grand_total or 0) }}</td>
+                    <td>
+                        <a href="/attendance/calendar?diary_id={{ d.id }}" class="pill-btn pill-primary" style="padding:2px 10px;">View</a>
+                        <a href="/generate/preview/{{ d.id }}" class="pill-btn pill-info" style="padding:2px 10px;">Preview</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">📓</div><div class="empty-text">No diaries found.</div></div>
+    {% endif %}
+</div>
+{% endblock %}

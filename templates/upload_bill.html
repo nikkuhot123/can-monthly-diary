@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Upload Bill{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Upload Bill</h2>
+    <a href="/bills/list/{{ diary.id }}" class="pill-btn pill-outline">← Back to Bills</a>
+</div>
+<div class="card-audit" style="max-width:600px;">
+    <form method="POST" action="/bills/upload/{{ diary.id }}" enctype="multipart/form-data" class="form-audit">
+        <div class="mb-3">
+            <label>Bill Category</label>
+            <select name="bill_category" class="form-select" required>
+                <option value="hotel">Hotel</option>
+                <option value="travel">Travel</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label>Select Bill Image/PDF</label>
+            <input type="file" name="file" class="form-control" required>
+        </div>
+        <small style="color:var(--color-muted);">Upload a scanned bill or receipt.</small>
+        <div style="margin-top:16px;">
+            <button type="submit" class="pill-btn pill-primary">Upload</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

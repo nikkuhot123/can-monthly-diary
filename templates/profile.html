@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Profile - Audit Diary{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>My Profile</h2>
+    <a href="/attendance/dashboard" class="pill-btn pill-outline">← Back to Dashboard</a>
+</div>
+
+<!-- Basic Info Card -->
+<div class="card-audit mb-4" style="max-width:700px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 style="color:var(--color-gold);margin:0;">Basic Information</h5>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Staff No</label>
+            <div><strong>{{ user.staff_no }}</strong></div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Name</label>
+            <div><strong>{{ user.name }}</strong></div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Designation</label>
+            <div>{{ user.designation or 'N/A' }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">DP Code</label>
+            <div>{{ user.dp_code or 'N/A' }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Section</label>
+            <div>{{ user.section or 'N/A' }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Zone</label>
+            <div>{{ user.zone or 'N/A' }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Basic Pay</label>
+            <div>₹{{ '%.2f'|format(user.basic_pay or 0) }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Home State</label>
+            <div>{{ user.home_state or 'N/A' }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">City Category</label>
+            <div>{{ user.city_category or 'N/A' }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Email</label>
+            <div>{{ user.email or 'N/A' }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Mobile</label>
+            <div>{{ user.mobile or 'N/A' }}</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">Role</label>
+            <div><span class="status-badge {{ 'badge-draft' if user.is_admin else 'badge-submitted' }}">{{ 'Admin' if user.is_admin else 'User' }}</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Personal Details Card -->
+<div class="card-audit" style="max-width:700px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 style="color:var(--color-gold);margin:0;">Personal Details for Excel</h5>
+        <a href="/auth/profile/edit" class="pill-btn pill-primary" style="font-size:0.8rem;">✏️ Edit</a>
+    </div>
+    <p style="font-size:0.8rem;color:var(--color-muted);margin-bottom:16px;">
+        These details are used when generating your TA bill Excel files.
+    </p>
+    <div class="row">
+        {% set fields = [
+            ('Address Line 1', user.address_line1),
+            ('Address Line 2', user.address_line2),
+            ('City / PIN', user.city_pin),
+            ('Bank Name', user.bank_name),
+            ('Bank Account No.', user.bank_account_no),
+            ('TA ID', user.ta_id),
+        ] %}
+        {% for label, value in fields %}
+        <div class="col-md-6 mb-3">
+            <label style="font-size:0.75rem;color:var(--color-muted);">{{ label }}</label>
+            <div class="d-flex align-items-center gap-2">
+                <strong>{{ value or '— Not set —' }}</strong>
+                {% if value %}
+                <form method="POST" action="/auth/profile/clear-field" style="display:inline;margin:0;">
+                    <input type="hidden" name="field" value="{{ {
+                        'Address Line 1': 'address_line1',
+                        'Address Line 2': 'address_line2',
+                        'City / PIN': 'city_pin',
+                        'Bank Name': 'bank_name',
+                        'Bank Account No.': 'bank_account_no',
+                        'TA ID': 'ta_id',
+                    }[label] }}">
+                    <button type="submit" style="background:none;border:none;color:var(--color-danger);cursor:pointer;font-size:0.7rem;padding:0;" title="Clear this field">✕</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% if user.address_line1 or user.address_line2 or user.city_pin or user.bank_name or user.bank_account_no or user.ta_id %}
+    <div class="mt-3 pt-3" style="border-top:1px solid var(--color-border);">
+        <form method="POST" action="/auth/profile/clear-all" onsubmit="return confirm('Clear ALL personal details? This cannot be undone.');">
+            <button type="submit" class="pill-btn pill-danger" style="font-size:0.8rem;">🗑️ Clear All Details</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

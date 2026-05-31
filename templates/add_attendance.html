@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Add Attendance{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Add Attendance</h2>
+    <a href="/attendance/calendar?diary_id={{ diary.id }}" class="pill-btn pill-outline">← Back to Calendar</a>
+</div>
+
+<div class="card-audit" style="max-width:700px;">
+    <form method="POST" action="/attendance/add/{{ diary.id }}" class="form-audit">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Date</label>
+                <input type="date" name="duty_date" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Branch Name</label>
+                <input type="text" name="branch_name" class="form-control" placeholder="Branch name">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Duty From</label>
+                <input type="time" name="duty_from_time" class="form-control" value="09:00">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Duty To</label>
+                <input type="time" name="duty_to_time" class="form-control" value="18:00">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label>DP Code</label>
+                <input type="text" name="dp_code" class="form-control">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Audit Type</label>
+                <input type="text" name="audit_type" class="form-control" placeholder="e.g. SAI, Concurrent">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Place</label>
+                <input type="text" name="place" class="form-control">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label>Mandays Sanctioned</label>
+                <input type="number" name="mandays_sanctioned" class="form-control" value="0">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Mandays Utilised</label>
+                <input type="number" name="mandays_utilised" class="form-control" value="0">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Mandays Pending</label>
+                <input type="number" name="mandays_pending" class="form-control" value="0">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Executive Mandays</label>
+                <input type="number" name="executive_mandays" class="form-control" value="0">
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label class="d-block">Is Holiday</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" name="is_holiday" value="true">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="col-md-3">
+                <label class="d-block">Is Leave</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" name="is_leave" value="true">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button type="submit" class="pill-btn pill-primary">Save Attendance</button>
+            <a href="/attendance/calendar?diary_id={{ diary.id }}" class="pill-btn pill-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

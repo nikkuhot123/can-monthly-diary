@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Edit Diary{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Edit Diary</h2>
+    <a href="/attendance/dashboard" class="pill-btn pill-outline">← Back to Dashboard</a>
+</div>
+<div class="card-audit" style="max-width:500px;">
+    <form method="POST" class="form-audit">
+        <div class="mb-3">
+            <label>Bank State</label>
+            <select name="bank_state" class="form-select">
+                <option value="Maharashtra" {% if diary.bank_state == 'Maharashtra' %}selected{% endif %}>Maharashtra</option>
+                <option value="Karnataka" {% if diary.bank_state == 'Karnataka' %}selected{% endif %}>Karnataka</option>
+                <option value="Delhi" {% if diary.bank_state == 'Delhi' %}selected{% endif %}>Delhi</option>
+                <option value="Gujarat" {% if diary.bank_state == 'Gujarat' %}selected{% endif %}>Gujarat</option>
+                <option value="Madhya Pradesh" {% if diary.bank_state == 'Madhya Pradesh' %}selected{% endif %}>Madhya Pradesh</option>
+                <option value="Tamil Nadu" {% if diary.bank_state == 'Tamil Nadu' %}selected{% endif %}>Tamil Nadu</option>
+                <option value="Uttar Pradesh" {% if diary.bank_state == 'Uttar Pradesh' %}selected{% endif %}>Uttar Pradesh</option>
+                <option value="Rajasthan" {% if diary.bank_state == 'Rajasthan' %}selected{% endif %}>Rajasthan</option>
+                <option value="Kerala" {% if diary.bank_state == 'Kerala' %}selected{% endif %}>Kerala</option>
+                <option value="Telangana" {% if diary.bank_state == 'Telangana' %}selected{% endif %}>Telangana</option>
+                <option value="West Bengal" {% if diary.bank_state == 'West Bengal' %}selected{% endif %}>West Bengal</option>
+                <option value="Bihar" {% if diary.bank_state == 'Bihar' %}selected{% endif %}>Bihar</option>
+                <option value="Punjab" {% if diary.bank_state == 'Punjab' %}selected{% endif %}>Punjab</option>
+                <option value="Haryana" {% if diary.bank_state == 'Haryana' %}selected{% endif %}>Haryana</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button type="submit" class="pill-btn pill-primary">Update Diary</button>
+            <a href="/attendance/dashboard" class="pill-btn pill-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
