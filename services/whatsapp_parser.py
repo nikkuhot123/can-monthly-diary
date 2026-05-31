@@ -19,9 +19,13 @@ DATE_FIELD_PATTERNS = [
 FIELD_PATTERNS = {
     "staff_no": [
         r"staff\s*(?:no|number|id)[\s\-:.]+(\d{5,7})",
-        r"emp(?:loyee)?\s*(?:no|number|id|code)[\s\-:.]+(\d{5,7})",
+        r"emp(?:loyee)?\s*(?:no|id|number|code)[\s\-:.]+(\d{5,7})",
         r"s\.?\s*no[\s\-:.]+(\d{5,7})",
         r"staff[\s\-:.]+(\d{5,7})",
+        # "No - 863503" on its own line (common informal format)
+        r"(?:^|\n)\s*no\.?\s*[\-:.]\s*(\d{5,7})",
+        # "- 863503" after name line
+        r"(?:^|\n)\s*[\-–]\s*(\d{5,7})\s*(?:\n|$)",
     ],
     "branch_name": [
         r"branch\s+name[\s\-:]+(.+?)(?=\n|dp\s*code|type\s*of\s*audit|manday|executive|$)",
@@ -71,11 +75,20 @@ SKIP_PATTERNS = [
 ]
 
 
-def parse_date_string(date_str: str) -> Optional[date]:
+def parse_date_string(date_str: str, hint_year: int = 0) -> Optional[date]:
     date_str = date_str.strip()
     for fmt in ["%d.%m.%Y", "%d-%m-%Y", "%d/%m/%Y", "%d.%m.%y", "%d-%m-%y", "%d/%m/%y"]:
         try:
-            return datetime.strptime(date_str, fmt).date()
+            d = datetime.strptime(date_str, fmt).date()
+            # 2-digit year parsed as 20YY may be truncated (e.g. "02.04.20" meant 2026)
+            # If hint_year given and parsed year is far off, try substituting hint_year
+            if hint_year and d.year != hint_year and fmt.endswith("%y"):
+                try:
+                    fixed = d.replace(year=hint_year)
+                    return fixed
+                except ValueError:
+                    pass
+            return d
         except ValueError:
             continue
     if re.match(r"^\d{8}$", date_str):
@@ -91,12 +104,12 @@ def strip_formatting(text: str) -> str:
     return re.sub(r'[*_~`]', '', text)
 
 
-def extract_date_field(text: str) -> Optional[date]:
+def extract_date_field(text: str, hint_year: int = 0) -> Optional[date]:
     clean = strip_formatting(text)
     for pat in DATE_FIELD_PATTERNS:
         m = re.search(pat, clean, re.IGNORECASE | re.MULTILINE)
         if m:
-            d = parse_date_string(m.group(1))
+            d = parse_date_string(m.group(1), hint_year=hint_year)
             if d:
                 return d
     return None
@@ -231,10 +244,10 @@ def match_user_messages(
     return matched
 
 
-def parse_attendance_record(msg: Dict) -> Optional[Dict]:
+def parse_attendance_record(msg: Dict, hint_year: int = 0) -> Optional[Dict]:
     full_text = msg["full_text"]
 
-    duty_date = extract_date_field(full_text)
+    duty_date = extract_date_field(full_text, hint_year=hint_year)
     if not duty_date:
         return None
 
@@ -336,7 +349,7 @@ def process_whatsapp_upload(
     active_sender_keys: set = set()
     for msg in all_messages:
         body = strip_formatting(msg.get("body", "") + " " + msg.get("full_text", ""))
-        d = extract_date_field(body)
+        d = extract_date_field(body, hint_year=target_year)
         if d and d.month == target_month and d.year == target_year:
             sk = sender_key_fn(msg)
             if sk:
@@ -363,7 +376,7 @@ def process_whatsapp_upload(
         # Try target-month messages first (most relevant)
         for msg in msgs:
             body = strip_formatting(msg.get("body", "") + " " + msg.get("full_text", ""))
-            d = extract_date_field(body)
+            d = extract_date_field(body, hint_year=target_year)
             if d and d.month == target_month and d.year == target_year:
                 for pat in FIELD_PATTERNS["staff_no"]:
                     mo = re.search(pat, body, re.IGNORECASE)
@@ -580,7 +593,7 @@ def process_whatsapp_upload(
 
         # Parse each message in the group
         for msg in msgs:
-            parsed = parse_attendance_record(msg)
+            parsed = parse_attendance_record(msg, hint_year=target_year)
             if not parsed:
                 continue
 
