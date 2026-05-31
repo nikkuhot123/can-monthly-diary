@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Account - Audit Diary</title>
+    <title>First Time Login - Audit Diary</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,9 +13,12 @@
 <body>
 <div class="auth-page">
     <div class="auth-card">
-        <h2>✦ Link Your Account</h2>
-        <p style="text-align:center;font-size:0.85rem;color:#6b7280;margin-bottom:20px;">
-            Connect your Google account to your staff profile
+        <h2>✦ Audit Diary</h2>
+        <p style="text-align:center;font-size:0.95rem;font-weight:600;color:#1e3a5f;margin-bottom:4px;">
+            First Time Login
+        </p>
+        <p style="text-align:center;font-size:0.82rem;color:#6b7280;margin-bottom:20px;">
+            Enter your Employee ID and registered mobile number to get started. This is a one-time step.
         </p>
 
         {% if error %}
@@ -30,14 +33,14 @@
                 <input type="email" class="form-control" value="{{ request.query_params.email or '' }}" readonly style="background:#f3f4f6;">
             </div>
             <div class="mb-3">
-                <label>Staff Number</label>
-                <input type="text" name="staff_no" class="form-control" required placeholder="Your 6-digit staff number">
+                <label>Employee ID</label>
+                <input type="text" name="staff_no" class="form-control" required placeholder="Your 6-digit Employee ID">
             </div>
             <div class="mb-3">
                 <label>Mobile Number</label>
                 <input type="text" name="mobile" class="form-control" required placeholder="Your 10-digit mobile number">
             </div>
-            <button type="submit" class="google-btn">Link &amp; Continue</button>
+            <button type="submit" class="google-btn">Continue →</button>
         </form>
 
         <div class="auth-footer">Secured with Firebase Authentication</div>
