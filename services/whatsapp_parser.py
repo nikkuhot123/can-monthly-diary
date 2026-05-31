@@ -285,7 +285,7 @@ def process_whatsapp_upload(
 ) -> dict:
     from database.models import User, MonthlyDiary, AttendanceRecord
     from services.calendar_utils import is_bank_holiday, get_bank_holiday_reason
-    from sqlalchemy import func
+    from sqlalchemy import cast, Integer, func
     from calendar import monthrange
 
     # 1. Parse ALL messages from the WhatsApp chat
@@ -316,7 +316,7 @@ def process_whatsapp_upload(
     total_leaves = 0
     total_review = 0
     total_month_mismatch = 0
-    results_by_user: Dict[str, dict] = {}
+    results_by_user: Dict[int, dict] = {}
     processed_diaries: Dict[int, set] = {}  # diary_id -> set of existing dates
 
     # 4. Process each sender group
@@ -327,27 +327,8 @@ def process_whatsapp_upload(
         sender_mobile = sample.get("sender_mobile", "")
         sender_name = sample.get("sender_name", "")
 
-        # PRIMARY: Match by staff_no found in message bodies
-        all_text = " ".join(
-            m.get("body", "") + " " + m.get("full_text", "")
-            for m in msgs[:100]  # Check first 100 messages
-        )
-        found_staffs = set(re.findall(r'\b(\d{6})\b', all_text))
-        for sid in sorted(found_staffs):
-            target_user = db.query(User).filter(User.staff_no == sid).first()
-            if target_user:
-                break
-
-        # SECONDARY: Match by mobile number
-        if not target_user and sender_mobile:
-            norm_mobile = normalize_mobile(sender_mobile)
-            if norm_mobile:
-                target_user = db.query(User).filter(
-                    User.mobile.like(f"%{norm_mobile}")
-                ).first()
-
-        # TERTIARY: Match by name tokens
-        if not target_user and sender_name:
+        # PRIMARY: Match by sender_name (most reliable — identifies who sent the message)
+        if sender_name:
             sender_words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
                            if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from', 'this', 'that')]
             for word in sender_words:
@@ -357,7 +338,55 @@ def process_whatsapp_upload(
                 if target_user:
                     break
 
-        # Skip senders who don't match any User
+        # SECONDARY: Match by mobile number
+        if not target_user and sender_mobile:
+            norm_mobile = normalize_mobile(sender_mobile)
+            if norm_mobile:
+                target_user = db.query(User).filter(
+                    User.mobile.like(f"%{norm_mobile}")
+                ).first()
+
+        # TERTIARY: Try staff_no from message body as fallback
+        if not target_user:
+            all_text = " ".join(
+                m.get("body", "") + " " + m.get("full_text", "")
+                for m in msgs[:100]
+            )
+            found_staffs = set(re.findall(r'\b(\d{6})\b', all_text))
+            for sid in sorted(found_staffs):
+                target_user = db.query(User).filter(User.staff_no == sid).first()
+                if target_user:
+                    break
+
+        # Auto-create User for unmatched senders
+        if not target_user and sender_name:
+            # Generate unique staff_no: find max numeric value + 1
+            max_staff = db.query(func.max(cast(User.staff_no, Integer))).scalar()
+            new_staff_no = str((max_staff + 1) if max_staff else 900001)
+
+            target_user = User(
+                staff_no=new_staff_no,
+                name=sender_name,
+                mobile=sender_mobile or "",
+                hashed_password="AUTO_CREATED_WHATSAPP_USER",
+                is_active=True,
+                is_admin=False,
+            )
+            db.add(target_user)
+            db.flush()
+
+            # Track in results (other counters will be added below)
+            results_by_user[target_user.id] = {
+                "user_name": target_user.name,
+                "staff_no": target_user.staff_no,
+                "new": 0,
+                "duplicates": 0,
+                "leaves": 0,
+                "needs_review": 0,
+                "auto_created": True,
+            }
+
+        # Still skip if no sender_name to work with
         if not target_user:
             continue
 
@@ -472,14 +501,19 @@ def process_whatsapp_upload(
             total_leaves += 1
             user_leaves_filled += 1
 
-        results_by_user[sender_key] = {
-            "user_name": target_user.name,
-            "staff_no": target_user.staff_no,
-            "new": user_new,
-            "duplicates": user_duplicates,
-            "leaves": user_leaves_filled,
-            "needs_review": user_review,
-        }
+        if target_user.id not in results_by_user:
+            results_by_user[target_user.id] = {
+                "user_name": target_user.name,
+                "staff_no": target_user.staff_no,
+                "new": 0,
+                "duplicates": 0,
+                "leaves": 0,
+                "needs_review": 0,
+            }
+        results_by_user[target_user.id]["new"] += user_new
+        results_by_user[target_user.id]["duplicates"] += user_duplicates
+        results_by_user[target_user.id]["leaves"] += user_leaves_filled
+        results_by_user[target_user.id]["needs_review"] += user_review
 
     try:
         db.commit()

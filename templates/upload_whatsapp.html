@@ -32,7 +32,7 @@
             <tbody>
             {% for key, u in result.results_by_user.items() %}
                 <tr>
-                    <td>{{ u.user_name }} ({{ u.staff_no }})</td>
+                    <td>{{ u.user_name }} ({{ u.staff_no }}){% if u.auto_created %} <span class="badge badge-auto-create">Auto-created</span>{% endif %}</td>
                     <td>{{ u.new }}</td>
                     <td>{{ u.duplicates }}</td>
                     <td>{{ u.leaves }}</td>

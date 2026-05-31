@@ -108,6 +108,7 @@ body {
 .badge-draft     { background: var(--color-warning-bg); color: #92400e; }
 .badge-submitted { background: var(--color-success-bg); color: #166534; }
 .badge-reviewed  { background: var(--color-info-bg); color: var(--color-info); }
+.badge-auto-create { background: var(--color-accent-bg, #ede9fe); color: var(--color-accent, #7c3aed); font-size: .7rem; padding: 1px 6px; border-radius: 4px; margin-left: 4px; font-weight: 500; white-space: nowrap; }
 
 .table-audit {
   width: 100%;
