@@ -329,15 +329,61 @@ def process_whatsapp_upload(
     target_month = admin_diary.month
     target_year = admin_diary.year
 
-    # 3. Resolve each message to a User (per-message, not per-sender-group)
-    #    Priority: staff_no in body > sender mobile > sender name > auto-create
+    # 3. PRE-SCAN: identify which senders have attendance messages in target month/year.
+    #    Only senders active in this specific month get processed — avoids matching
+    #    users across months where staff_nos may have changed.
+    sender_key_fn = lambda m: m.get("sender_mobile") or m.get("sender_name") or ""
+    active_sender_keys: set = set()
+    for msg in all_messages:
+        body = strip_formatting(msg.get("body", "") + " " + msg.get("full_text", ""))
+        d = extract_date_field(body)
+        if d and d.month == target_month and d.year == target_year:
+            sk = sender_key_fn(msg)
+            if sk:
+                active_sender_keys.add(sk)
+
+    if not active_sender_keys:
+        return {"total_messages": 0, "total_new": 0, "total_duplicates": 0,
+                "total_leaves": 0, "total_review": 0, "total_users": 0,
+                "results_by_user": {}, "error": f"No messages found for {target_month}/{target_year}"}
+
+    # 4. Resolve each message to a User — but ONLY for active senders.
+    #    Priority per sender: staff_no from their target-month messages > mobile > name.
+    #    staff_no is extracted from the FULL message set of that sender (not just one msg).
+
+    # First, collect all messages per sender key
+    sender_msgs: Dict[str, List[Dict]] = {}
+    for msg in all_messages:
+        sk = sender_key_fn(msg)
+        if sk and sk in active_sender_keys:
+            sender_msgs.setdefault(sk, []).append(msg)
+
+    # For each sender, extract their best staff_no (from target-month messages first)
+    def _best_staff_no_for_sender(msgs: List[Dict]) -> str:
+        # Try target-month messages first (most relevant)
+        for msg in msgs:
+            body = strip_formatting(msg.get("body", "") + " " + msg.get("full_text", ""))
+            d = extract_date_field(body)
+            if d and d.month == target_month and d.year == target_year:
+                for pat in FIELD_PATTERNS["staff_no"]:
+                    mo = re.search(pat, body, re.IGNORECASE)
+                    if mo:
+                        return mo.group(1)
+        # Fallback: any message
+        for msg in msgs:
+            body = strip_formatting(msg.get("body", "") + " " + msg.get("full_text", ""))
+            for pat in FIELD_PATTERNS["staff_no"]:
+                mo = re.search(pat, body, re.IGNORECASE)
+                if mo:
+                    return mo.group(1)
+        return ""
+
     _cache_by_staff:  Dict[str, Optional["User"]] = {}
     _cache_by_mobile: Dict[str, Optional["User"]] = {}
     _cache_by_name:   Dict[str, Optional["User"]] = {}
-    _autocreated:     Dict[str, "User"] = {}  # sender_key -> auto-created User
+    _autocreated:     Dict[str, "User"] = {}
 
     def _extract_real_staff_no(body_text: str) -> str:
-        """Extract staff_no from message body, return '' if not found."""
         clean = strip_formatting(body_text)
         for pat in FIELD_PATTERNS["staff_no"]:
             m_sno = re.search(pat, clean, re.IGNORECASE)
@@ -442,16 +488,34 @@ def process_whatsapp_upload(
 
         return _autocreated[autocreate_key]
 
-    # 4. Group resolved messages by user_id
+    # 5. Resolve each active sender to a User using their best staff_no
+    #    (extracted from target-month messages, so changed IDs don't cause confusion)
     user_msgs: Dict[int, List[Dict]] = {}
     user_map:  Dict[int, "User"]     = {}
     autocreated_ids: set             = set()
 
-    for msg in all_messages:
-        u = _resolve_user(msg)
+    for sk, msgs in sender_msgs.items():
+        # Determine best staff_no for this sender from their target-month messages
+        sample = msgs[0]
+        sender_name   = sample.get("sender_name", "")
+        sender_mobile = sample.get("sender_mobile", "")
+
+        # Override: use staff_no from target-month messages (authoritative for this upload)
+        real_staff_no = _best_staff_no_for_sender(msgs)
+
+        # Build a synthetic msg for _resolve_user using the best staff_no
+        synthetic = dict(sample)
+        if real_staff_no:
+            synthetic["body"] = f"staff no: {real_staff_no}\n" + synthetic.get("body", "")
+            synthetic["full_text"] = f"staff no: {real_staff_no}\n" + synthetic.get("full_text", "")
+
+        u = _resolve_user(synthetic)
         if not u:
             continue
-        user_msgs.setdefault(u.id, []).append(msg)
+
+        # Route ALL messages from this sender to this user
+        for msg in msgs:
+            user_msgs.setdefault(u.id, []).append(msg)
         user_map[u.id] = u
 
     for ac_user in _autocreated.values():
