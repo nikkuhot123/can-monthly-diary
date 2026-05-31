@@ -144,15 +144,18 @@ def _google_login_inner(request, id_token, db):
         return response
 
     # Genuine first-time login — redirect to setup
+    google_name = decoded.get("name", "")
     temp_token = create_access_token({
         "google_uid": google_uid,
         "google_email": google_email,
+        "google_name": google_name,
         "temp_setup": True,
     })
     return JSONResponse({
         "needs_setup": True,
         "temp_token": temp_token,
         "email": google_email,
+        "display_name": google_name,
     })
 
 
@@ -172,6 +175,7 @@ def google_setup(
     temp_token: str = Form(...),
     staff_no: str = Form(...),
     mobile: str = Form(...),
+    full_name: str = Form(""),
     db: Session = Depends(get_db),
 ):
     """First-time setup: link Google account to staff_no.
@@ -200,6 +204,7 @@ def google_setup(
 
     google_uid = payload.get("google_uid")
     google_email = payload.get("google_email", "")
+    google_name = payload.get("google_name", "")
 
     if not google_uid:
         return templates.TemplateResponse("setup_account.html", {
@@ -240,7 +245,7 @@ def google_setup(
 
         sqlite_user = User(
             staff_no=staff_no,
-            name=google_email.split('@')[0],  # placeholder until admin fills details
+            name=full_name.strip() or google_name or google_email.split('@')[0],
             mobile=norm_mobile,
             email=google_email,
             hashed_password="GOOGLE_AUTH_USER",
@@ -251,13 +256,18 @@ def google_setup(
         db.commit()
         db.refresh(sqlite_user)
 
-    # Sync google_uid, email, mobile onto the user record
+    # Sync google_uid, email, mobile, name onto the user record
     changed = False
     if google_uid and not sqlite_user.google_uid:
         sqlite_user.google_uid = google_uid
         changed = True
     if google_email and not sqlite_user.email:
         sqlite_user.email = google_email
+        changed = True
+    # Update name: user-entered name > Google account name > keep existing
+    actual_name = full_name.strip() or google_name
+    if actual_name and actual_name != sqlite_user.name:
+        sqlite_user.name = actual_name
         changed = True
     if mobile and not sqlite_user.mobile:
         import re as _re

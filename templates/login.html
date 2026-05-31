@@ -66,6 +66,7 @@ document.getElementById('google-signin-btn').addEventListener('click', async fun
         const data = await resp.json();
         if (data.needs_setup) {
             sessionStorage.setItem('temp_token', data.temp_token);
+            sessionStorage.setItem('display_name', data.display_name || '');
             window.location.href = '/auth/setup?email=' + encodeURIComponent(data.email);
         } else if (data.redirect) {
             window.location.href = data.redirect;

@@ -33,6 +33,10 @@
                 <input type="email" class="form-control" value="{{ request.query_params.email or '' }}" readonly style="background:#f3f4f6;">
             </div>
             <div class="mb-3">
+                <label>Your Full Name</label>
+                <input type="text" name="full_name" id="full_name_input" class="form-control" required placeholder="As per official records">
+            </div>
+            <div class="mb-3">
                 <label>Employee ID</label>
                 <input type="text" name="staff_no" class="form-control" required placeholder="Your 6-digit Employee ID">
             </div>
@@ -50,6 +54,8 @@
 <script>
     const token = sessionStorage.getItem('temp_token');
     if (token) document.getElementById('temp_token_input').value = token;
+    const displayName = sessionStorage.getItem('display_name');
+    if (displayName) document.getElementById('full_name_input').value = displayName;
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
