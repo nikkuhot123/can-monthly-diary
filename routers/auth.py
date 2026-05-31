@@ -88,14 +88,22 @@ def google_login(
     db: Session = Depends(get_db),
 ):
     """Verify Firebase ID token, create JWT session, or return needs_setup."""
-    from services.firebase_service import verify_google_token, get_user_link
-
     try:
+        return _google_login_inner(request, id_token, db)
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] google_login crashed: {traceback.format_exc()}")
+        return JSONResponse({"error": f"Login failed: {e}"}, status_code=500)
+
+
+def _google_login_inner(request, id_token, db):
+    try:
+        from services.firebase_service import verify_google_token
         decoded = verify_google_token(id_token)
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         return JSONResponse({"error": str(e)}, status_code=401)
-    except RuntimeError as e:
-        return JSONResponse({"error": "Service unavailable: Firebase not configured"}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"error": f"Firebase error: {e}"}, status_code=503)
 
     google_uid = decoded["uid"]
     google_email = decoded.get("email", "")

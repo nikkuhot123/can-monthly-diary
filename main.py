@@ -11,6 +11,22 @@ from routers import auth, attendance, bills, travel, hotel, local, other, genera
 
 models.Base.metadata.create_all(bind=engine)
 
+# Schema migrations for columns added after initial deploy
+def _run_migrations():
+    import sqlalchemy as sa
+    with engine.connect() as conn:
+        existing = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(users)")).fetchall()}
+        pending = {
+            "google_uid": "VARCHAR(128)",
+        }
+        for col, typ in pending.items():
+            if col not in existing:
+                conn.execute(sa.text(f"ALTER TABLE users ADD COLUMN {col} {typ}"))
+                print(f"[migration] Added column users.{col}")
+        conn.commit()
+
+_run_migrations()
+
 for folder in ["uploads/whatsapp", "uploads/bills", "uploads/generated"]:
     os.makedirs(folder, exist_ok=True)
 
