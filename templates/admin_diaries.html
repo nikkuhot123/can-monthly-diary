@@ -3,16 +3,24 @@
 {% block content %}
 <div class="page-header">
     <h2>All Diaries</h2>
+    <span style="color:var(--color-muted);font-size:0.85rem;">{{ diaries|length }} diaries across {{ user_count }} staff</span>
 </div>
+
+<div class="card-audit mb-3" style="padding:12px 16px;">
+    <input type="text" id="diary-search" class="form-control" placeholder="Search by staff no, name, month…" style="max-width:360px;">
+</div>
+
 <div class="card-audit">
     {% if diaries %}
     <div class="table-responsive">
-        <table class="table table-audit">
+        <table class="table table-audit" id="diary-table">
             <thead>
                 <tr>
-                    <th>Staff</th>
-                    <th>Month</th>
+                    <th>Staff No</th>
+                    <th>Name</th>
+                    <th>Month / Year</th>
                     <th>Bank State</th>
+                    <th>Records</th>
                     <th>Status</th>
                     <th>Grand Total</th>
                     <th>Actions</th>
@@ -20,15 +28,18 @@
             </thead>
             <tbody>
                 {% for d in diaries %}
-                <tr>
+                <tr data-search="{{ (d.user.staff_no if d.user else '') }} {{ (d.user.name if d.user else '') }} {{ d.month }} {{ d.year }}">
+                    <td><strong>{{ d.user.staff_no if d.user else '—' }}</strong></td>
                     <td>{{ d.user.name if d.user else 'User #' ~ d.user_id }}</td>
                     <td>{{ d.month }}/{{ d.year }}</td>
-                    <td>{{ d.bank_state }}</td>
+                    <td>{{ d.bank_state or '—' }}</td>
+                    <td>{{ d.record_count }}</td>
                     <td><span class="status-badge badge-{% if d.status == 'draft' %}draft{% elif d.status == 'submitted' %}submitted{% else %}reviewed{% endif %}">{{ d.status|title }}</span></td>
                     <td>₹{{ '%.2f'|format(d.grand_total or 0) }}</td>
-                    <td>
-                        <a href="/attendance/calendar?diary_id={{ d.id }}" class="pill-btn pill-primary" style="padding:2px 10px;">View</a>
+                    <td style="white-space:nowrap;">
+                        <a href="/attendance/calendar?diary_id={{ d.id }}" class="pill-btn pill-primary" style="padding:2px 10px;">Calendar</a>
                         <a href="/generate/preview/{{ d.id }}" class="pill-btn pill-info" style="padding:2px 10px;">Preview</a>
+                        <a href="/generate/download-excel/{{ d.id }}" class="pill-btn pill-success" style="padding:2px 10px;">Excel</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -39,4 +50,14 @@
     <div class="empty-state"><div class="empty-icon">📓</div><div class="empty-text">No diaries found.</div></div>
     {% endif %}
 </div>
+
+<script>
+document.getElementById('diary-search').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#diary-table tbody tr').forEach(row => {
+        const text = row.getAttribute('data-search').toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+    });
+});
+</script>
 {% endblock %}

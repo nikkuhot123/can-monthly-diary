@@ -2,8 +2,9 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database.db import get_db
-from database.models import User, MonthlyDiary
+from database.models import User, MonthlyDiary, AttendanceRecord
 from routers.auth import get_current_user, admin_required
 
 router = APIRouter()
@@ -13,18 +14,37 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/users")
 def list_users(request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
     user = get_current_user(request, db)
-    users = db.query(User).order_by(User.name).all()
+    users = db.query(User).order_by(User.staff_no).all()
+    diary_counts = dict(
+        db.query(MonthlyDiary.user_id, func.count(MonthlyDiary.id))
+        .group_by(MonthlyDiary.user_id)
+        .all()
+    )
+    for u in users:
+        u.diary_count = diary_counts.get(u.id, 0)
     return templates.TemplateResponse("admin_users.html", {
         "request": request, "user": user, "users": users,
     })
 
 
 @router.get("/diaries")
-def all_diaries(request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
+def all_diaries(request: Request, staff: str = None, db: Session = Depends(get_db), _=Depends(admin_required)):
     user = get_current_user(request, db)
-    diaries = db.query(MonthlyDiary).order_by(MonthlyDiary.year.desc(), MonthlyDiary.month.desc()).all()
+    q = db.query(MonthlyDiary).join(User, MonthlyDiary.user_id == User.id)
+    if staff:
+        q = q.filter(User.staff_no == staff)
+    diaries = q.order_by(User.staff_no, MonthlyDiary.year.desc(), MonthlyDiary.month.desc()).all()
+    # Attach record counts
+    counts = dict(
+        db.query(AttendanceRecord.diary_id, func.count(AttendanceRecord.id))
+        .group_by(AttendanceRecord.diary_id)
+        .all()
+    )
+    for d in diaries:
+        d.record_count = counts.get(d.id, 0)
+    user_count = db.query(func.count(func.distinct(MonthlyDiary.user_id))).scalar()
     return templates.TemplateResponse("admin_diaries.html", {
-        "request": request, "user": user, "diaries": diaries,
+        "request": request, "user": user, "diaries": diaries, "user_count": user_count,
     })
 
 
