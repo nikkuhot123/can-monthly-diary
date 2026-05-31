@@ -21,12 +21,20 @@ NO_CACHE_HEADERS = {
 }
 
 
+def _get_diary_for_user(db, diary_id: int, user):
+    """Fetch diary by id. Admin can view any diary; regular user only their own."""
+    q = db.query(MonthlyDiary).filter(MonthlyDiary.id == diary_id)
+    if not user.is_admin:
+        q = q.filter(MonthlyDiary.user_id == user.id)
+    return q.first()
+
+
 @router.get("/preview/{diary_id}")
 def preview_diary(request: Request, diary_id: int, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/auth/login")
-    diary = db.query(MonthlyDiary).filter(MonthlyDiary.id == diary_id, MonthlyDiary.user_id == user.id).first()
+    diary = _get_diary_for_user(db, diary_id, user)
     if not diary:
         raise HTTPException(status_code=404)
 
@@ -50,7 +58,7 @@ def download_diary_excel(diary_id: int, request: Request, db: Session = Depends(
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/auth/login")
-    diary = db.query(MonthlyDiary).filter(MonthlyDiary.id == diary_id, MonthlyDiary.user_id == user.id).first()
+    diary = _get_diary_for_user(db, diary_id, user)
     if not diary:
         raise HTTPException(status_code=404)
 
@@ -60,12 +68,15 @@ def download_diary_excel(diary_id: int, request: Request, db: Session = Depends(
     local = db.query(LocalConveyance).filter(LocalConveyance.diary_id == diary_id).order_by(LocalConveyance.travel_date).all()
     other = db.query(OtherExpense).filter(OtherExpense.diary_id == diary_id).order_by(OtherExpense.created_at).all()
 
+    from database.models import User as UserModel
+    diary_owner = db.query(UserModel).filter(UserModel.id == diary.user_id).first() or user
+
     output_dir = os.path.join(settings.UPLOAD_DIR, "generated", "diary_excel")
     os.makedirs(output_dir, exist_ok=True)
-    fname = f"TA_Diary_{user.staff_no}_{diary.month}_{diary.year}.xlsx"
+    fname = f"TA_Diary_{diary_owner.staff_no}_{diary.month}_{diary.year}.xlsx"
     fpath = os.path.join(output_dir, fname)
 
-    generate_diary_excel(fpath, user, diary, attendance, travel, hotels, local, other)
+    generate_diary_excel(fpath, diary_owner, diary, attendance, travel, hotels, local, other)
     return FileResponse(fpath, filename=fname, headers=NO_CACHE_HEADERS)
 
 
@@ -74,7 +85,7 @@ def download_hrms_excel(diary_id: int, request: Request, db: Session = Depends(g
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/auth/login")
-    diary = db.query(MonthlyDiary).filter(MonthlyDiary.id == diary_id, MonthlyDiary.user_id == user.id).first()
+    diary = _get_diary_for_user(db, diary_id, user)
     if not diary:
         raise HTTPException(status_code=404)
 
@@ -84,12 +95,15 @@ def download_hrms_excel(diary_id: int, request: Request, db: Session = Depends(g
     other = db.query(OtherExpense).filter(OtherExpense.diary_id == diary_id).order_by(OtherExpense.created_at).all()
     attendance = db.query(AttendanceRecord).filter(AttendanceRecord.diary_id == diary_id).order_by(AttendanceRecord.duty_date).all()
 
+    from database.models import User as UserModel
+    diary_owner = db.query(UserModel).filter(UserModel.id == diary.user_id).first() or user
+
     output_dir = os.path.join(settings.UPLOAD_DIR, "generated", "hrms_excel")
     os.makedirs(output_dir, exist_ok=True)
-    fname = f"HRMS_Bill_{user.staff_no}_{diary.month}_{diary.year}.xlsx"
+    fname = f"HRMS_Bill_{diary_owner.staff_no}_{diary.month}_{diary.year}.xlsx"
     fpath = os.path.join(output_dir, fname)
 
-    generate_hrms_excel(fpath, user, diary, travel, hotels, local, other, attendance)
+    generate_hrms_excel(fpath, diary_owner, diary, travel, hotels, local, other, attendance)
     return FileResponse(fpath, filename=fname, headers=NO_CACHE_HEADERS)
 
 

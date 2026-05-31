@@ -79,9 +79,10 @@ def calendar_view(
         return RedirectResponse(url="/auth/login")
 
     if diary_id:
-        diary = db.query(MonthlyDiary).filter(
-            MonthlyDiary.id == diary_id, MonthlyDiary.user_id == user.id
-        ).first()
+        q = db.query(MonthlyDiary).filter(MonthlyDiary.id == diary_id)
+        if not user.is_admin:
+            q = q.filter(MonthlyDiary.user_id == user.id)
+        diary = q.first()
         if not diary:
             raise HTTPException(status_code=404, detail="Diary not found")
         month = diary.month
