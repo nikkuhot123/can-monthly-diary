@@ -94,7 +94,8 @@ def calendar_view(
         diary = get_or_create_diary(db, user.id, month, year)
 
     _, days_in_month = calendar.monthrange(year, month)
-    first_weekday = calendar.weekday(year, month, 1)
+    # Convert Mon=0 (Python) to Sun=0 (calendar template column order)
+    first_weekday = (calendar.weekday(year, month, 1) + 1) % 7
 
     records = db.query(AttendanceRecord).filter(
         AttendanceRecord.diary_id == diary.id
