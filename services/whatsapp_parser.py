@@ -421,43 +421,52 @@ def process_whatsapp_upload(
             if _cache_by_staff[real_staff_no]:
                 return _cache_by_staff[real_staff_no]
 
-        # SECONDARY: sender mobile number → look up existing user
         norm_mobile = normalize_mobile(sender_mobile) if sender_mobile else ""
-        if norm_mobile:
-            if norm_mobile not in _cache_by_mobile:
-                _cache_by_mobile[norm_mobile] = db.query(User).filter(
-                    User.mobile.like(f"%{norm_mobile}")
-                ).first()
-            if _cache_by_mobile[norm_mobile]:
-                u = _cache_by_mobile[norm_mobile]
-                # Backfill real staff_no if user had a fake one
-                if real_staff_no and u.staff_no != real_staff_no:
-                    conflict = db.query(User).filter(User.staff_no == real_staff_no).first()
-                    if not conflict:
-                        u.staff_no = real_staff_no
-                        db.flush()
-                        _cache_by_staff[real_staff_no] = u
-                return u
 
-        # TERTIARY: sender name → look up existing user
-        if sender_name:
-            words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
-                     if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from', 'this', 'that')]
-            for word in words:
-                if word not in _cache_by_name:
-                    _cache_by_name[word] = db.query(User).filter(
-                        func.lower(User.name).contains(word)
+        # If we have a definitive staff_no but it's not in DB → go straight to auto-create.
+        # Skip mobile/name fuzzy matching — generic words in WhatsApp display names
+        # (like "Unit", "Nagpur", "IO") can match completely wrong existing users.
+        if real_staff_no:
+            pass  # fall through to AUTO-CREATE below
+
+        else:
+            # SECONDARY: sender mobile number → look up existing user
+            if norm_mobile:
+                if norm_mobile not in _cache_by_mobile:
+                    _cache_by_mobile[norm_mobile] = db.query(User).filter(
+                        User.mobile.like(f"%{norm_mobile}")
                     ).first()
-                if _cache_by_name[word]:
-                    u = _cache_by_name[word]
-                    # Backfill real staff_no if user had a fake one
-                    if real_staff_no and u.staff_no != real_staff_no:
-                        conflict = db.query(User).filter(User.staff_no == real_staff_no).first()
-                        if not conflict:
-                            u.staff_no = real_staff_no
-                            db.flush()
-                            _cache_by_staff[real_staff_no] = u
-                    return u
+                if _cache_by_mobile[norm_mobile]:
+                    return _cache_by_mobile[norm_mobile]
+
+            # TERTIARY: sender name — only used when no staff_no and no mobile.
+            # Use strict matching: ALL meaningful words must appear in the DB name.
+            if sender_name and not norm_mobile:
+                personal_words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
+                                  if len(w) > 3 and w.lower() not in (
+                                      'the','for','and','with','from','this','that',
+                                      'unit','branch','zone','nagpur','mumbai','pune',
+                                      'delhi','inspection','surat','nashik','vadodara',
+                                      'allowances','dear','sir','good','morning',
+                                  )]
+                if len(personal_words) >= 2:
+                    # Require at least 2 personal words to match to avoid false hits
+                    candidate = None
+                    for word in personal_words[:2]:
+                        if word not in _cache_by_name:
+                            _cache_by_name[word] = db.query(User).filter(
+                                func.lower(User.name).contains(word)
+                            ).first()
+                        if not _cache_by_name[word]:
+                            candidate = None
+                            break
+                        if candidate is None:
+                            candidate = _cache_by_name[word]
+                        elif candidate.id != _cache_by_name[word].id:
+                            candidate = None
+                            break
+                    if candidate:
+                        return candidate
 
         # AUTO-CREATE: build user with real staff_no if available, else sequential
         display_name = sender_name or extract_name_from_body(body_text) or norm_mobile
