@@ -228,11 +228,39 @@ def google_setup(
                 sqlite_user = candidate
 
     if not sqlite_user:
-        return templates.TemplateResponse("setup_account.html", {
-            "request": request,
-            "error": f"Staff No {staff_no} not found. Contact your administrator.",
-            "email": google_email,
-        })
+        # Auto-create the user on first login with the credentials they provided.
+        # Admin can deactivate them later via /admin/users if needed.
+        import re as _re
+        norm_mobile = _re.sub(r'\D', '', mobile) if mobile else ""
+        if norm_mobile.startswith('91') and len(norm_mobile) == 12:
+            norm_mobile = norm_mobile[2:]
+        norm_mobile = norm_mobile[-10:]
+
+        sqlite_user = User(
+            staff_no=staff_no,
+            name=google_email.split('@')[0],  # placeholder until admin fills details
+            mobile=norm_mobile,
+            email=google_email,
+            hashed_password="GOOGLE_AUTH_USER",
+            is_active=True,
+            is_admin=False,
+        )
+        db.add(sqlite_user)
+        db.commit()
+        db.refresh(sqlite_user)
+
+    # Sync email and mobile onto the user record if missing
+    changed = False
+    if google_email and not sqlite_user.email:
+        sqlite_user.email = google_email
+        changed = True
+    if mobile and not sqlite_user.mobile:
+        import re as _re
+        nm = _re.sub(r'\D', '', mobile)
+        if nm.startswith('91') and len(nm) == 12:
+            nm = nm[2:]
+        sqlite_user.mobile = nm[-10:]
+        changed = True
 
     # Determine admin status from configured whitelist
     is_admin = google_email in (email.strip() for email in ADMIN_EMAILS)
@@ -240,6 +268,8 @@ def google_setup(
     # Update SQLite user is_admin if applicable
     if is_admin and not sqlite_user.is_admin:
         sqlite_user.is_admin = True
+        changed = True
+    if changed:
         db.commit()
 
     # Save user_link to Firestore — non-fatal if it fails
