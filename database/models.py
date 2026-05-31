@@ -22,6 +22,7 @@ class User(Base):
     home_state       = Column(String(60), default="Maharashtra")
     city_category    = Column(String(10), default="B1")
     email            = Column(String(150), unique=True)
+    google_uid       = Column(String(128), unique=True, index=True)
     hashed_password  = Column(String(255), nullable=False)
     is_active        = Column(Boolean, default=True)
     is_admin         = Column(Boolean, default=False)

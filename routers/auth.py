@@ -100,58 +100,52 @@ def google_login(
     google_uid = decoded["uid"]
     google_email = decoded.get("email", "")
 
-    # Check if this Google account is already linked
-    try:
-        user_link = get_user_link(google_uid)
-    except Exception as e:
-        import traceback
-        print(f"[WARN] Firestore get_user_link failed: {e}\n{traceback.format_exc()}")
-        user_link = None
+    # PRIMARY lookup: SQLite google_uid column — works even if Firestore is down
+    sqlite_user = db.query(User).filter(User.google_uid == google_uid).first()
 
-    if not user_link:
-        # Firestore may have failed or this is a first-time login.
-        # Try to find user by email in SQLite as fallback.
+    # SECONDARY: email match (covers admin seeded without google_uid)
+    if not sqlite_user and google_email:
         sqlite_user = db.query(User).filter(User.email == google_email).first()
-        if sqlite_user:
-            # Email matched — log in directly without Firestore
-            is_admin = google_email in (e.strip() for e in ADMIN_EMAILS) or sqlite_user.is_admin
-            token = create_access_token({
-                "user_id": sqlite_user.id,
-                "staff_no": sqlite_user.staff_no,
-                "is_admin": is_admin,
-            })
-            response = JSONResponse({"redirect": "/attendance/dashboard"})
-            response.set_cookie(key="access_token", value=token, httponly=True, max_age=86400 * 30)
-            return response
 
-        # Genuine first-time login — redirect to setup
-        temp_token = create_access_token({
-            "google_uid": google_uid,
-            "google_email": google_email,
-            "temp_setup": True,
-        })
-        return JSONResponse({
-            "needs_setup": True,
-            "temp_token": temp_token,
-            "email": google_email,
-        })
-
-    # User is linked — find SQLite user by staff_no
-    sqlite_user = db.query(User).filter(User.staff_no == user_link["staff_no"]).first()
+    # TERTIARY: Firestore fallback
     if not sqlite_user:
-        return JSONResponse({
-            "error": "User account not found in system. Contact your administrator."
-        }, status_code=404)
+        try:
+            from services.firebase_service import get_user_link
+            user_link = get_user_link(google_uid)
+            if user_link:
+                sqlite_user = db.query(User).filter(User.staff_no == user_link["staff_no"]).first()
+        except Exception as e:
+            print(f"[WARN] Firestore get_user_link failed: {e}")
 
-    # Create JWT session
-    token = create_access_token({
-        "user_id": sqlite_user.id,
-        "staff_no": sqlite_user.staff_no,
-        "is_admin": user_link.get("is_admin", False),
+    if sqlite_user:
+        # Backfill google_uid if missing (ensures future logins skip Firestore)
+        if not sqlite_user.google_uid:
+            sqlite_user.google_uid = google_uid
+            if google_email and not sqlite_user.email:
+                sqlite_user.email = google_email
+            db.commit()
+
+        is_admin = google_email in (e.strip() for e in ADMIN_EMAILS) or sqlite_user.is_admin
+        token = create_access_token({
+            "user_id": sqlite_user.id,
+            "staff_no": sqlite_user.staff_no,
+            "is_admin": is_admin,
+        })
+        response = JSONResponse({"redirect": "/attendance/dashboard"})
+        response.set_cookie(key="access_token", value=token, httponly=True, max_age=86400 * 30)
+        return response
+
+    # Genuine first-time login — redirect to setup
+    temp_token = create_access_token({
+        "google_uid": google_uid,
+        "google_email": google_email,
+        "temp_setup": True,
     })
-    response = JSONResponse({"redirect": "/attendance/dashboard"})
-    response.set_cookie(key="access_token", value=token, httponly=True, max_age=86400 * 30)
-    return response
+    return JSONResponse({
+        "needs_setup": True,
+        "temp_token": temp_token,
+        "email": google_email,
+    })
 
 
 @router.get("/setup")
@@ -249,8 +243,11 @@ def google_setup(
         db.commit()
         db.refresh(sqlite_user)
 
-    # Sync email and mobile onto the user record if missing
+    # Sync google_uid, email, mobile onto the user record
     changed = False
+    if google_uid and not sqlite_user.google_uid:
+        sqlite_user.google_uid = google_uid
+        changed = True
     if google_email and not sqlite_user.email:
         sqlite_user.email = google_email
         changed = True
