@@ -17,6 +17,12 @@ DATE_FIELD_PATTERNS = [
 ]
 
 FIELD_PATTERNS = {
+    "staff_no": [
+        r"staff\s*(?:no|number|id)[\s\-:.]+(\d{5,7})",
+        r"emp(?:loyee)?\s*(?:no|number|id|code)[\s\-:.]+(\d{5,7})",
+        r"s\.?\s*no[\s\-:.]+(\d{5,7})",
+        r"staff[\s\-:.]+(\d{5,7})",
+    ],
     "branch_name": [
         r"branch\s+name[\s\-:]+(.+?)(?=\n|dp\s*code|type\s*of\s*audit|manday|executive|$)",
     ],
@@ -135,40 +141,30 @@ def split_messages(raw_text: str) -> List[Dict]:
             continue
 
         content = m.group(3).strip()
-        lines = content.split("\n", 1)
-        sender_line = lines[0].strip() if lines else ""
-        body = lines[1].strip() if len(lines) > 1 else ""
 
+        # WhatsApp format: "SENDER: message_body\nmore_body"
+        # The sender and message start may be on the same line separated by ": "
+        sender_name = ""
+        sender_mobile = ""
+        body = content
+
+        colon_idx = content.find(": ")
+        if colon_idx != -1:
+            potential_sender = content[:colon_idx].strip()
+            rest_body = content[colon_idx + 2:].strip()
+            # Sender should be short (no colons inside, reasonable length)
+            if potential_sender and "\n" not in potential_sender and len(potential_sender) <= 80:
+                phone_m = re.match(r"^\+?91[\s\-]?\d[\d\s]{8,11}$", potential_sender)
+                if phone_m:
+                    sender_mobile = normalize_mobile(potential_sender)
+                    body = rest_body
+                else:
+                    sender_name = potential_sender
+                    body = rest_body
+
+        # Fallback: if body is empty, use full content
         if not body:
-            body = sender_line
-            sender_line = ""
-
-        phone_m = re.match(r"^\s*\+?91[\s\-]?\d[\d\s]{8,11}$", sender_line.strip())
-        if phone_m:
-            sender_mobile = normalize_mobile(sender_line.strip())
-            sender_name = ""
-        else:
-            sender_mobile = ""
-            sender_name = sender_line
-
-        # FALLBACK: For single-line format "Name: message" or "- Name: message",
-        # sender_line is empty and body contains the full line. Try to extract sender.
-        if not sender_line and not sender_mobile and body:
-            colon_match = re.match(r"^\s*(?:[-–—]+\s*)?(.+?)\s*:\s*", body)
-            if colon_match:
-                potential = colon_match.group(1).strip()
-                # Remove leading dash/space
-                potential = re.sub(r"^[-–—]+\s*", "", potential).strip()
-                if potential:
-                    # Check if it's a phone number
-                    phone_check = re.match(r"^\s*\+?91[\s\-]?\d[\d\s]{8,11}$", potential)
-                    if phone_check:
-                        sender_mobile = normalize_mobile(potential)
-                        sender_name = ""
-                    else:
-                        sender_name = potential
-                        # Remove sender prefix from body
-                        body = body[colon_match.end():].strip()
+            body = content
 
         messages.append({
             "msg_date": msg_date,
@@ -305,11 +301,89 @@ def process_whatsapp_upload(
     target_month = admin_diary.month
     target_year = admin_diary.year
 
-    # 3. Group messages by sender
-    sender_groups: Dict[str, List[Dict]] = {}
+    # 3. Resolve each message to a User (per-message, not per-sender-group)
+    #    Priority: staff_no in body > sender mobile > sender name > auto-create
+    _cache_by_staff:  Dict[str, Optional["User"]] = {}
+    _cache_by_mobile: Dict[str, Optional["User"]] = {}
+    _cache_by_name:   Dict[str, Optional["User"]] = {}
+    _autocreated:     Dict[str, "User"] = {}  # sender_key -> auto-created User
+
+    def _resolve_user(msg: Dict) -> Optional["User"]:
+        body_text = msg.get("body", "") + " " + msg.get("full_text", "")
+        sender_mobile = msg.get("sender_mobile", "")
+        sender_name   = msg.get("sender_name", "")
+
+        # PRIMARY: explicit staff_no / employee_id field in message body
+        for pat in FIELD_PATTERNS["staff_no"]:
+            m_sno = re.search(pat, body_text, re.IGNORECASE)
+            if m_sno:
+                sno = m_sno.group(1)
+                if sno not in _cache_by_staff:
+                    _cache_by_staff[sno] = db.query(User).filter(User.staff_no == sno).first()
+                if _cache_by_staff[sno]:
+                    return _cache_by_staff[sno]
+
+        # SECONDARY: sender mobile number
+        if sender_mobile:
+            norm = normalize_mobile(sender_mobile)
+            if norm not in _cache_by_mobile:
+                _cache_by_mobile[norm] = db.query(User).filter(
+                    User.mobile.like(f"%{norm}")
+                ).first()
+            if _cache_by_mobile[norm]:
+                return _cache_by_mobile[norm]
+
+        # TERTIARY: sender name
+        if sender_name:
+            words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
+                     if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from', 'this', 'that')]
+            for word in words:
+                if word not in _cache_by_name:
+                    _cache_by_name[word] = db.query(User).filter(
+                        func.lower(User.name).contains(word)
+                    ).first()
+                if _cache_by_name[word]:
+                    return _cache_by_name[word]
+
+            # Auto-create: use sender_name as key to avoid duplicates
+            sender_key = sender_name.strip().lower()
+            if sender_key not in _autocreated:
+                max_staff = db.query(func.max(cast(User.staff_no, Integer))).scalar()
+                new_staff_no = str((max_staff + 1) if max_staff else 900001)
+                new_user = User(
+                    staff_no=new_staff_no,
+                    name=sender_name,
+                    mobile=sender_mobile or "",
+                    hashed_password="AUTO_CREATED_WHATSAPP_USER",
+                    is_active=True,
+                    is_admin=False,
+                )
+                db.add(new_user)
+                db.flush()
+                _autocreated[sender_key] = new_user
+                # Seed caches so next message from same name reuses this user
+                for word in words:
+                    _cache_by_name[word] = new_user
+                if sender_mobile:
+                    _cache_by_mobile[normalize_mobile(sender_mobile)] = new_user
+            return _autocreated[sender_key]
+
+        return None
+
+    # 4. Group resolved messages by user_id
+    user_msgs: Dict[int, List[Dict]] = {}
+    user_map:  Dict[int, "User"]     = {}
+    autocreated_ids: set             = set()
+
     for msg in all_messages:
-        sender_key = msg.get("sender_name") or msg.get("sender_mobile") or "unknown"
-        sender_groups.setdefault(sender_key, []).append(msg)
+        u = _resolve_user(msg)
+        if not u:
+            continue
+        user_msgs.setdefault(u.id, []).append(msg)
+        user_map[u.id] = u
+
+    for ac_user in _autocreated.values():
+        autocreated_ids.add(ac_user.id)
 
     total_new = 0
     total_duplicates = 0
@@ -319,76 +393,11 @@ def process_whatsapp_upload(
     results_by_user: Dict[int, dict] = {}
     processed_diaries: Dict[int, set] = {}  # diary_id -> set of existing dates
 
-    # 4. Process each sender group
-    for sender_key, msgs in sender_groups.items():
-        # Try to find a matching User in DB
-        target_user = None
-        sample = msgs[0]
-        sender_mobile = sample.get("sender_mobile", "")
-        sender_name = sample.get("sender_name", "")
-
-        # PRIMARY: Match by sender_name (most reliable — identifies who sent the message)
-        if sender_name:
-            sender_words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
-                           if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from', 'this', 'that')]
-            for word in sender_words:
-                target_user = db.query(User).filter(
-                    func.lower(User.name).contains(word)
-                ).first()
-                if target_user:
-                    break
-
-        # SECONDARY: Match by mobile number
-        if not target_user and sender_mobile:
-            norm_mobile = normalize_mobile(sender_mobile)
-            if norm_mobile:
-                target_user = db.query(User).filter(
-                    User.mobile.like(f"%{norm_mobile}")
-                ).first()
-
-        # TERTIARY: Try staff_no from message body as fallback
-        if not target_user:
-            all_text = " ".join(
-                m.get("body", "") + " " + m.get("full_text", "")
-                for m in msgs[:100]
-            )
-            found_staffs = set(re.findall(r'\b(\d{6})\b', all_text))
-            for sid in sorted(found_staffs):
-                target_user = db.query(User).filter(User.staff_no == sid).first()
-                if target_user:
-                    break
-
-        # Auto-create User for unmatched senders
-        if not target_user and sender_name:
-            # Generate unique staff_no: find max numeric value + 1
-            max_staff = db.query(func.max(cast(User.staff_no, Integer))).scalar()
-            new_staff_no = str((max_staff + 1) if max_staff else 900001)
-
-            target_user = User(
-                staff_no=new_staff_no,
-                name=sender_name,
-                mobile=sender_mobile or "",
-                hashed_password="AUTO_CREATED_WHATSAPP_USER",
-                is_active=True,
-                is_admin=False,
-            )
-            db.add(target_user)
-            db.flush()
-
-            # Track in results (other counters will be added below)
-            results_by_user[target_user.id] = {
-                "user_name": target_user.name,
-                "staff_no": target_user.staff_no,
-                "new": 0,
-                "duplicates": 0,
-                "leaves": 0,
-                "needs_review": 0,
-                "auto_created": True,
-            }
-
-        # Still skip if no sender_name to work with
-        if not target_user:
-            continue
+    # 5. Process each user's messages
+    for uid, msgs in user_msgs.items():
+        target_user = user_map[uid]
+        sender_mobile = msgs[0].get("sender_mobile", "")
+        sender_name   = msgs[0].get("sender_name", "")
 
         # Get or create MonthlyDiary for this user
         target_diary = db.query(MonthlyDiary).filter(
@@ -509,6 +518,7 @@ def process_whatsapp_upload(
                 "duplicates": 0,
                 "leaves": 0,
                 "needs_review": 0,
+                "auto_created": target_user.id in autocreated_ids,
             }
         results_by_user[target_user.id]["new"] += user_new
         results_by_user[target_user.id]["duplicates"] += user_duplicates
