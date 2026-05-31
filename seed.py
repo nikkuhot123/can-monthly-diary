@@ -13,7 +13,7 @@ else:
     user = models.User(
         staff_no="861198",
         name="NIKHILESH KUMAR",
-        mobile="",
+        mobile="9199199936",
         designation="Senior Manager",
         designation_code="1301",
         dp_code="55265",
@@ -22,7 +22,7 @@ else:
         basic_pay=105280.0,
         home_state="Maharashtra",
         city_category="B1",
-        email="nikhilesh@canarabank.com",
+        email="nikhilkumarnikhilesh@gmail.com",
         hashed_password=bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode(),
         is_active=True,
         is_admin=True,

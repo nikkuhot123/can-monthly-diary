@@ -6,6 +6,17 @@
     <button class="pill-btn pill-gold" data-bs-toggle="modal" data-bs-target="#newMonthModal">+ New Month</button>
 </div>
 
+<div class="card-audit mb-4" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <div style="font-size:0.75rem;color:var(--color-muted);margin-bottom:2px;">Logged in as</div>
+        <strong>{{ user.name }}</strong>
+        <span style="margin:0 8px;color:var(--color-muted);">·</span>
+        <span style="font-size:0.85rem;color:var(--color-muted);">Staff No: {{ user.staff_no }}</span>
+        {% if user.is_admin %}<span class="status-badge badge-draft ms-2">Admin</span>{% endif %}
+    </div>
+    <a href="/auth/profile" class="pill-btn pill-primary">My Profile</a>
+</div>
+
 {% if diaries %}
 {% for d in diaries %}
 <div class="card-audit diary-card border-{% if d.status == 'draft' %}draft{% elif d.status == 'submitted' %}submitted{% else %}reviewed{% endif %}">
