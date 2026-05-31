@@ -336,32 +336,51 @@ def process_whatsapp_upload(
     _cache_by_name:   Dict[str, Optional["User"]] = {}
     _autocreated:     Dict[str, "User"] = {}  # sender_key -> auto-created User
 
+    def _extract_real_staff_no(body_text: str) -> str:
+        """Extract staff_no from message body, return '' if not found."""
+        clean = strip_formatting(body_text)
+        for pat in FIELD_PATTERNS["staff_no"]:
+            m_sno = re.search(pat, clean, re.IGNORECASE)
+            if m_sno:
+                return m_sno.group(1)
+        return ""
+
     def _resolve_user(msg: Dict) -> Optional["User"]:
         body_text = msg.get("body", "") + " " + msg.get("full_text", "")
         sender_mobile = msg.get("sender_mobile", "")
         sender_name   = msg.get("sender_name", "")
 
-        # PRIMARY: explicit staff_no / employee_id field in message body
-        for pat in FIELD_PATTERNS["staff_no"]:
-            m_sno = re.search(pat, body_text, re.IGNORECASE)
-            if m_sno:
-                sno = m_sno.group(1)
-                if sno not in _cache_by_staff:
-                    _cache_by_staff[sno] = db.query(User).filter(User.staff_no == sno).first()
-                if _cache_by_staff[sno]:
-                    return _cache_by_staff[sno]
+        # Extract real staff_no from body — used for both lookup AND auto-create
+        real_staff_no = _extract_real_staff_no(body_text)
 
-        # SECONDARY: sender mobile number
-        if sender_mobile:
-            norm = normalize_mobile(sender_mobile)
-            if norm not in _cache_by_mobile:
-                _cache_by_mobile[norm] = db.query(User).filter(
-                    User.mobile.like(f"%{norm}")
+        # PRIMARY: staff_no from body → look up existing user
+        if real_staff_no:
+            if real_staff_no not in _cache_by_staff:
+                _cache_by_staff[real_staff_no] = db.query(User).filter(
+                    User.staff_no == real_staff_no
                 ).first()
-            if _cache_by_mobile[norm]:
-                return _cache_by_mobile[norm]
+            if _cache_by_staff[real_staff_no]:
+                return _cache_by_staff[real_staff_no]
 
-        # TERTIARY: sender name
+        # SECONDARY: sender mobile number → look up existing user
+        norm_mobile = normalize_mobile(sender_mobile) if sender_mobile else ""
+        if norm_mobile:
+            if norm_mobile not in _cache_by_mobile:
+                _cache_by_mobile[norm_mobile] = db.query(User).filter(
+                    User.mobile.like(f"%{norm_mobile}")
+                ).first()
+            if _cache_by_mobile[norm_mobile]:
+                u = _cache_by_mobile[norm_mobile]
+                # Backfill real staff_no if user had a fake one
+                if real_staff_no and u.staff_no != real_staff_no:
+                    conflict = db.query(User).filter(User.staff_no == real_staff_no).first()
+                    if not conflict:
+                        u.staff_no = real_staff_no
+                        db.flush()
+                        _cache_by_staff[real_staff_no] = u
+                return u
+
+        # TERTIARY: sender name → look up existing user
         if sender_name:
             words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
                      if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from', 'this', 'that')]
@@ -371,22 +390,41 @@ def process_whatsapp_upload(
                         func.lower(User.name).contains(word)
                     ).first()
                 if _cache_by_name[word]:
-                    return _cache_by_name[word]
+                    u = _cache_by_name[word]
+                    # Backfill real staff_no if user had a fake one
+                    if real_staff_no and u.staff_no != real_staff_no:
+                        conflict = db.query(User).filter(User.staff_no == real_staff_no).first()
+                        if not conflict:
+                            u.staff_no = real_staff_no
+                            db.flush()
+                            _cache_by_staff[real_staff_no] = u
+                    return u
 
-        # AUTO-CREATE: use mobile as unique key if no name, extract name from body
-        # Covers phone-number senders whose staff_no/mobile isn't in DB yet
-        display_name = sender_name or extract_name_from_body(body_text) or sender_mobile
+        # AUTO-CREATE: build user with real staff_no if available, else sequential
+        display_name = sender_name or extract_name_from_body(body_text) or norm_mobile
         if not display_name:
             return None
 
-        autocreate_key = sender_mobile if sender_mobile else display_name.strip().lower()
+        # Use real staff_no as key so same person's messages across different
+        # sender names/mobiles all resolve to the same auto-created user
+        autocreate_key = real_staff_no or norm_mobile or display_name.strip().lower()
+
         if autocreate_key not in _autocreated:
-            max_staff = db.query(func.max(cast(User.staff_no, Integer))).scalar()
-            new_staff_no = str((max_staff + 1) if max_staff else 900001)
+            if real_staff_no:
+                # Check not already taken (shouldn't be, but guard it)
+                existing = db.query(User).filter(User.staff_no == real_staff_no).first()
+                if existing:
+                    _autocreated[autocreate_key] = existing
+                    return existing
+                new_staff_no = real_staff_no
+            else:
+                max_staff = db.query(func.max(cast(User.staff_no, Integer))).scalar()
+                new_staff_no = str((max_staff + 1) if max_staff else 900001)
+
             new_user = User(
                 staff_no=new_staff_no,
                 name=display_name,
-                mobile=sender_mobile or "",
+                mobile=norm_mobile or "",
                 hashed_password="AUTO_CREATED_WHATSAPP_USER",
                 is_active=True,
                 is_admin=False,
@@ -394,13 +432,14 @@ def process_whatsapp_upload(
             db.add(new_user)
             db.flush()
             _autocreated[autocreate_key] = new_user
+            _cache_by_staff[new_staff_no] = new_user
+            if norm_mobile:
+                _cache_by_mobile[norm_mobile] = new_user
             if sender_name:
-                words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
-                         if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from', 'this', 'that')]
-                for word in words:
+                for word in [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
+                             if len(w) > 2]:
                     _cache_by_name[word] = new_user
-            if sender_mobile:
-                _cache_by_mobile[normalize_mobile(sender_mobile)] = new_user
+
         return _autocreated[autocreate_key]
 
     # 4. Group resolved messages by user_id
