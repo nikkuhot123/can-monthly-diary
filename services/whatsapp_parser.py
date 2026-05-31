@@ -39,10 +39,12 @@ FIELD_PATTERNS = {
     ],
     "mandays_pending": [
         r"mandays\s+pending[\s\-:]+(\d+)",
+        r"mandays\s+remaining[\s\-:]+(\d+)",
     ],
     "mandays_utilised": [
         r"mandays\s+utilis(?:ed|e)[\s\-:]+(\d+)",
         r"running\s+mandays[\s\-:]+(\d+)",
+        r"mandays\s+used[\s\-:]+(\d+)",
     ],
     "executive_mandays": [
         r"executive\s+mandays[\s\-:]+(\d+)",
@@ -84,9 +86,15 @@ def parse_date_string(date_str: str) -> Optional[date]:
     return None
 
 
+def strip_formatting(text: str) -> str:
+    """Remove WhatsApp bold/italic markers (*text*, _text_) so they don't block regex."""
+    return re.sub(r'[*_~`]', '', text)
+
+
 def extract_date_field(text: str) -> Optional[date]:
+    clean = strip_formatting(text)
     for pat in DATE_FIELD_PATTERNS:
-        m = re.search(pat, text, re.IGNORECASE | re.MULTILINE)
+        m = re.search(pat, clean, re.IGNORECASE | re.MULTILINE)
         if m:
             d = parse_date_string(m.group(1))
             if d:
@@ -95,6 +103,7 @@ def extract_date_field(text: str) -> Optional[date]:
 
 
 def extract_field(text: str, field_key: str) -> Optional[str]:
+    text = strip_formatting(text)
     for pat in FIELD_PATTERNS.get(field_key, []):
         m = re.search(pat, text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
         if m:
@@ -119,6 +128,25 @@ def should_skip(text: str) -> bool:
         if re.search(p, t):
             return True
     return False
+
+
+NAME_FROM_BODY_PATTERNS = [
+    r"name\s+of\s+io[\s\-:]+(.+?)(?=\n|staff|branch|dp|$)",
+    r"name[\s\-:]+(.+?)(?=\n|staff|branch|dp|$)",
+    r"io\s+name[\s\-:]+(.+?)(?=\n|staff|branch|dp|$)",
+]
+
+
+def extract_name_from_body(text: str) -> str:
+    """Extract IO/employee name from message body for auto-create labelling."""
+    clean = strip_formatting(text)
+    for pat in NAME_FROM_BODY_PATTERNS:
+        m = re.search(pat, clean, re.IGNORECASE)
+        if m:
+            name = m.group(1).strip().rstrip('.,;')
+            if name and len(name) <= 80:
+                return name
+    return ""
 
 
 def normalize_mobile(mobile: str) -> str:
@@ -345,30 +373,35 @@ def process_whatsapp_upload(
                 if _cache_by_name[word]:
                     return _cache_by_name[word]
 
-            # Auto-create: use sender_name as key to avoid duplicates
-            sender_key = sender_name.strip().lower()
-            if sender_key not in _autocreated:
-                max_staff = db.query(func.max(cast(User.staff_no, Integer))).scalar()
-                new_staff_no = str((max_staff + 1) if max_staff else 900001)
-                new_user = User(
-                    staff_no=new_staff_no,
-                    name=sender_name,
-                    mobile=sender_mobile or "",
-                    hashed_password="AUTO_CREATED_WHATSAPP_USER",
-                    is_active=True,
-                    is_admin=False,
-                )
-                db.add(new_user)
-                db.flush()
-                _autocreated[sender_key] = new_user
-                # Seed caches so next message from same name reuses this user
+        # AUTO-CREATE: use mobile as unique key if no name, extract name from body
+        # Covers phone-number senders whose staff_no/mobile isn't in DB yet
+        display_name = sender_name or extract_name_from_body(body_text) or sender_mobile
+        if not display_name:
+            return None
+
+        autocreate_key = sender_mobile if sender_mobile else display_name.strip().lower()
+        if autocreate_key not in _autocreated:
+            max_staff = db.query(func.max(cast(User.staff_no, Integer))).scalar()
+            new_staff_no = str((max_staff + 1) if max_staff else 900001)
+            new_user = User(
+                staff_no=new_staff_no,
+                name=display_name,
+                mobile=sender_mobile or "",
+                hashed_password="AUTO_CREATED_WHATSAPP_USER",
+                is_active=True,
+                is_admin=False,
+            )
+            db.add(new_user)
+            db.flush()
+            _autocreated[autocreate_key] = new_user
+            if sender_name:
+                words = [w.lower() for w in re.split(r'[\s,/:;]+', sender_name)
+                         if len(w) > 2 and w.lower() not in ('the', 'for', 'and', 'with', 'from', 'this', 'that')]
                 for word in words:
                     _cache_by_name[word] = new_user
-                if sender_mobile:
-                    _cache_by_mobile[normalize_mobile(sender_mobile)] = new_user
-            return _autocreated[sender_key]
-
-        return None
+            if sender_mobile:
+                _cache_by_mobile[normalize_mobile(sender_mobile)] = new_user
+        return _autocreated[autocreate_key]
 
     # 4. Group resolved messages by user_id
     user_msgs: Dict[int, List[Dict]] = {}
