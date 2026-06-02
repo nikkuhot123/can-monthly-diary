@@ -5,10 +5,10 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database.db import get_db
 from database.models import LocalConveyance, MonthlyDiary
-from routers.auth import get_current_user, admin_required
+from routers.auth import get_current_user, login_required
 from config import settings, get_state_from_gstin
 
-router = APIRouter(dependencies=[Depends(admin_required)])
+router = APIRouter(dependencies=[Depends(login_required)])
 templates = Jinja2Templates(directory="templates")
 
 

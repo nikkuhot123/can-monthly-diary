@@ -9,16 +9,16 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a href="/attendance/add/{{ diary.id }}" class="pill-btn pill-primary">+ Add Manually</a>
         <a href="/generate/preview/{{ diary.id }}" class="pill-btn pill-info">Preview</a>
-        {% if user.is_admin %}
-        <a href="/attendance/upload-whatsapp?diary_id={{ diary.id }}" class="pill-btn pill-success">Upload WhatsApp</a>
-        <form method="POST" action="/attendance/compute-leaves/{{ diary.id }}" style="display:inline">
-            <button type="submit" class="pill-btn pill-warning">Compute Leaves</button>
-        </form>
         <a href="/travel/list/{{ diary.id }}" class="pill-btn pill-outline">Travel</a>
         <a href="/hotel/list/{{ diary.id }}" class="pill-btn pill-outline">Hotel</a>
         <a href="/local/list/{{ diary.id }}" class="pill-btn pill-outline">Local</a>
         <a href="/other/list/{{ diary.id }}" class="pill-btn pill-outline">Other</a>
         <a href="/bills/list/{{ diary.id }}" class="pill-btn pill-outline">Bills</a>
+        {% if user.is_admin %}
+        <a href="/attendance/upload-whatsapp?diary_id={{ diary.id }}" class="pill-btn pill-success">Upload WhatsApp</a>
+        <form method="POST" action="/attendance/compute-leaves/{{ diary.id }}" style="display:inline">
+            <button type="submit" class="pill-btn pill-warning">Compute Leaves</button>
+        </form>
         {% endif %}
     </div>
 </div>
