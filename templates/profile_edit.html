@@ -13,6 +13,11 @@
             These details will be used when generating your TA bill Excel files.
         </p>
         <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Mobile Number</label>
+                <input type="tel" name="mobile" class="form-control"
+                       value="{{ user.mobile or '' }}" placeholder="10-digit mobile number">
+            </div>
             <div class="col-md-12 mb-3">
                 <label class="form-label">Address Line 1</label>
                 <input type="text" name="address_line1" class="form-control"

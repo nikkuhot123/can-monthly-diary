@@ -75,7 +75,7 @@ document.getElementById('google-signin-btn').addEventListener('click', async fun
         if (data.needs_setup) {
             sessionStorage.setItem('temp_token', data.temp_token);
             sessionStorage.setItem('display_name', data.display_name || '');
-            window.location.href = '/auth/setup?email=' + encodeURIComponent(data.email);
+            window.location.href = '/auth/setup?email=' + encodeURIComponent(data.email) + '&temp_token=' + encodeURIComponent(data.temp_token) + '&display_name=' + encodeURIComponent(data.display_name || '');
         } else if (data.redirect) {
             window.location.href = data.redirect;
         } else if (data.error) {

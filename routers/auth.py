@@ -166,6 +166,8 @@ def setup_page(request: Request):
         "request": request,
         "error": "",
         "email": request.query_params.get("email", ""),
+        "temp_token": request.query_params.get("temp_token", ""),
+        "display_name": request.query_params.get("display_name", ""),
     })
 
 
@@ -338,6 +340,7 @@ def profile_edit_page(request: Request, db: Session = Depends(get_db)):
 def profile_edit_save(
     request: Request,
     db: Session = Depends(get_db),
+    mobile: str = Form(""),
     address_line1: str = Form(""),
     address_line2: str = Form(""),
     city_pin: str = Form(""),
@@ -346,10 +349,16 @@ def profile_edit_save(
     ta_id: str = Form(""),
 ):
     """Save personal detail fields to the user record."""
+    import re as _re
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/auth/login")
 
+    if mobile.strip():
+        nm = _re.sub(r'\D', '', mobile)
+        if nm.startswith('91') and len(nm) == 12:
+            nm = nm[2:]
+        user.mobile = nm[-10:] if nm else None
     user.address_line1 = address_line1.strip() or None
     user.address_line2 = address_line2.strip() or None
     user.city_pin = city_pin.strip() or None

@@ -26,7 +26,7 @@
         {% endif %}
 
         <form method="POST" action="/auth/google-setup" class="form-audit">
-            <input type="hidden" name="temp_token" id="temp_token_input">
+            <input type="hidden" name="temp_token" id="temp_token_input" value="{{ temp_token }}">
 
             <div class="mb-3">
                 <label>Google Account</label>
@@ -34,7 +34,7 @@
             </div>
             <div class="mb-3">
                 <label>Your Full Name</label>
-                <input type="text" name="full_name" id="full_name_input" class="form-control" required placeholder="As per official records">
+                <input type="text" name="full_name" id="full_name_input" class="form-control" required placeholder="As per official records" value="{{ display_name }}">
             </div>
             <div class="mb-3">
                 <label>Employee ID</label>
@@ -52,10 +52,17 @@
 </div>
 
 <script>
-    const token = sessionStorage.getItem('temp_token');
-    if (token) document.getElementById('temp_token_input').value = token;
-    const displayName = sessionStorage.getItem('display_name');
-    if (displayName) document.getElementById('full_name_input').value = displayName;
+    // Server pre-fills these from URL params; sessionStorage is fallback only
+    const tokenInput = document.getElementById('temp_token_input');
+    if (!tokenInput.value) {
+        const ssToken = sessionStorage.getItem('temp_token');
+        if (ssToken) tokenInput.value = ssToken;
+    }
+    const nameInput = document.getElementById('full_name_input');
+    if (!nameInput.value) {
+        const ssName = sessionStorage.getItem('display_name');
+        if (ssName) nameInput.value = ssName;
+    }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
