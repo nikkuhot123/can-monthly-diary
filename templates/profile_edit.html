@@ -2,22 +2,74 @@
 {% block title %}Edit Profile - Audit Diary{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Edit Personal Details</h2>
+    <h2>Edit Profile</h2>
     <a href="/auth/profile" class="pill-btn pill-outline">← Back to Profile</a>
 </div>
 
-<form method="POST" action="/auth/profile/edit" style="max-width:700px;">
+<form method="POST" action="/auth/profile/edit" style="max-width:800px;">
     <div class="card-audit mb-4">
-        <h5 class="mb-3" style="color:var(--color-gold);">Personal Details</h5>
-        <p style="font-size:0.8rem;color:var(--color-muted);margin-bottom:16px;">
-            These details will be used when generating your TA bill Excel files.
-        </p>
+        <h5 class="mb-3" style="color:var(--color-gold);">Service Details</h5>
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Designation</label>
+                <input type="text" name="designation" class="form-control"
+                       value="{{ user.designation or '' }}" placeholder="e.g. Audit Officer">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Designation Code</label>
+                <input type="text" name="designation_code" class="form-control"
+                       value="{{ user.designation_code or '' }}" placeholder="e.g. AO">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">DP Code</label>
+                <input type="text" name="dp_code" class="form-control"
+                       value="{{ user.dp_code or '' }}" placeholder="e.g. 1234">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Section</label>
+                <input type="text" name="section" class="form-control"
+                       value="{{ user.section or '' }}" placeholder="e.g. Inspection">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Zone</label>
+                <input type="text" name="zone" class="form-control"
+                       value="{{ user.zone or '' }}" placeholder="e.g. Mumbai Zone">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Basic Pay (₹)</label>
+                <input type="number" step="0.01" name="basic_pay" class="form-control"
+                       value="{{ user.basic_pay or '' }}" placeholder="e.g. 56100">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Home State</label>
+                <select name="home_state" class="form-select">
+                    {% for s in all_states %}
+                    <option value="{{ s }}" {{ 'selected' if user.home_state == s }}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">City Category</label>
+                <select name="city_category" class="form-select">
+                    {% for cat in ['X', 'Y', 'Z', 'A1', 'B1', 'B2', 'C', 'R'] %}
+                    <option value="{{ cat }}" {{ 'selected' if user.city_category == cat }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
                 <label class="form-label">Mobile Number</label>
                 <input type="tel" name="mobile" class="form-control"
                        value="{{ user.mobile or '' }}" placeholder="10-digit mobile number">
             </div>
+        </div>
+    </div>
+
+    <div class="card-audit mb-4">
+        <h5 class="mb-3" style="color:var(--color-gold);">Personal Details for Excel</h5>
+        <p style="font-size:0.8rem;color:var(--color-muted);margin-bottom:16px;">
+            Used when generating your TA bill Excel files.
+        </p>
+        <div class="row">
             <div class="col-md-12 mb-3">
                 <label class="form-label">Address Line 1</label>
                 <input type="text" name="address_line1" class="form-control"

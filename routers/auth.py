@@ -327,12 +327,13 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/profile/edit")
 def profile_edit_page(request: Request, db: Session = Depends(get_db)):
-    """Show profile edit form with personal detail fields."""
+    from config import settings as _cfg
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/auth/login")
     return templates.TemplateResponse("profile_edit.html", {
-        "request": request, "user": user
+        "request": request, "user": user,
+        "all_states": sorted(_cfg.CANARA_BANK_GSTIN.keys()),
     })
 
 
@@ -340,6 +341,14 @@ def profile_edit_page(request: Request, db: Session = Depends(get_db)):
 def profile_edit_save(
     request: Request,
     db: Session = Depends(get_db),
+    designation: str = Form(""),
+    designation_code: str = Form(""),
+    dp_code: str = Form(""),
+    section: str = Form(""),
+    zone: str = Form(""),
+    basic_pay: str = Form(""),
+    home_state: str = Form(""),
+    city_category: str = Form(""),
     mobile: str = Form(""),
     address_line1: str = Form(""),
     address_line2: str = Form(""),
@@ -348,12 +357,24 @@ def profile_edit_save(
     bank_account_no: str = Form(""),
     ta_id: str = Form(""),
 ):
-    """Save personal detail fields to the user record."""
     import re as _re
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/auth/login")
 
+    user.designation = designation.strip() or None
+    user.designation_code = designation_code.strip() or None
+    user.dp_code = dp_code.strip() or None
+    user.section = section.strip() or None
+    user.zone = zone.strip() or None
+    try:
+        user.basic_pay = float(basic_pay) if basic_pay.strip() else user.basic_pay
+    except ValueError:
+        pass
+    if home_state.strip():
+        user.home_state = home_state.strip()
+    if city_category.strip():
+        user.city_category = city_category.strip()
     if mobile.strip():
         nm = _re.sub(r'\D', '', mobile)
         if nm.startswith('91') and len(nm) == 12:
