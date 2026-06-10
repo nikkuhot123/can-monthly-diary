@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Edit User - Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Edit User — {{ target.name }}</h2>
+    <a href="/admin/users" class="pill-btn pill-outline">← Back to Users</a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show">{{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+{% if success %}
+<div class="alert alert-success alert-dismissible fade show">{{ success }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<form method="POST" action="/admin/users/{{ target.id }}/edit" style="max-width:900px;">
+    <div class="card-audit mb-4">
+        <h5 class="mb-3" style="color:var(--color-gold);">Identity</h5>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                <input type="text" name="name" class="form-control" value="{{ target.name }}" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Staff No <span class="text-danger">*</span></label>
+                <input type="text" name="staff_no" class="form-control" value="{{ target.staff_no }}" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Mobile</label>
+                <input type="tel" name="mobile" class="form-control" value="{{ target.mobile or '' }}" placeholder="10-digit">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" value="{{ target.email or '' }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="card-audit mb-4">
+        <h5 class="mb-3" style="color:var(--color-gold);">Service Details</h5>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Designation</label>
+                <input type="text" name="designation" class="form-control" value="{{ target.designation or '' }}">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Designation Code</label>
+                <input type="text" name="designation_code" class="form-control" value="{{ target.designation_code or '' }}">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">DP Code</label>
+                <input type="text" name="dp_code" class="form-control" value="{{ target.dp_code or '' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Section</label>
+                <input type="text" name="section" class="form-control" value="{{ target.section or '' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Zone</label>
+                <input type="text" name="zone" class="form-control" value="{{ target.zone or '' }}">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Basic Pay (₹)</label>
+                <input type="number" step="0.01" name="basic_pay" class="form-control" value="{{ target.basic_pay or '' }}">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Home State</label>
+                <select name="home_state" class="form-select">
+                    {% for s in all_states %}
+                    <option value="{{ s }}" {{ 'selected' if target.home_state == s }}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">City Category</label>
+                <select name="city_category" class="form-select">
+                    {% for cat in ['X', 'Y', 'Z', 'A1', 'B1', 'B2', 'C', 'R'] %}
+                    <option value="{{ cat }}" {{ 'selected' if target.city_category == cat }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-audit mb-4">
+        <h5 class="mb-3" style="color:var(--color-gold);">Personal / Bank Details</h5>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Address Line 1</label>
+                <input type="text" name="address_line1" class="form-control" value="{{ target.address_line1 or '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Address Line 2</label>
+                <input type="text" name="address_line2" class="form-control" value="{{ target.address_line2 or '' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">City / PIN</label>
+                <input type="text" name="city_pin" class="form-control" value="{{ target.city_pin or '' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Bank Name</label>
+                <input type="text" name="bank_name" class="form-control" value="{{ target.bank_name or '' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Bank Account No.</label>
+                <input type="text" name="bank_account_no" class="form-control" value="{{ target.bank_account_no or '' }}">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">TA ID</label>
+                <input type="text" name="ta_id" class="form-control" value="{{ target.ta_id or '' }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="pill-btn pill-gold">Save Changes</button>
+        <a href="/admin/users" class="pill-btn pill-outline">Cancel</a>
+    </div>
+</form>
+{% endblock %}

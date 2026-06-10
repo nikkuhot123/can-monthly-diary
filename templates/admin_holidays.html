@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Manage Holidays - Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Manage Holidays</h2>
+    <span style="color:var(--color-muted);font-size:0.85rem;">Add holidays and apply to all users</span>
+</div>
+
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show">{{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+{% if success %}
+<div class="alert alert-success alert-dismissible fade show">{{ success }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="card-audit mb-4">
+    <h5 class="mb-3" style="color:var(--color-gold);">Add Holiday</h5>
+    <form method="POST" action="/admin/holidays/add">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Date</label>
+                <input type="date" name="holiday_date" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">State</label>
+                <select name="state" class="form-select">
+                    {% for s in all_states %}
+                    <option value="{{ s }}" {{ 'selected' if s == 'Maharashtra' }}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Description</label>
+                <input type="text" name="description" class="form-control" placeholder="e.g. Dussehra">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Type</label>
+                <select name="holiday_type" class="form-select">
+                    <option value="public">Public</option>
+                    <option value="bank">Bank</option>
+                    <option value="restricted">Restricted</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Apply to attendance?</label>
+                <select name="apply_to_attendance" class="form-select">
+                    <option value="yes">Yes — mark all records</option>
+                    <option value="no">No — only add to calendar</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="pill-btn pill-gold">Add Holiday</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="card-audit">
+    <h5 class="mb-3" style="color:var(--color-gold);">Recent Holidays</h5>
+    {% if holidays %}
+    <div class="table-responsive">
+        <table class="table table-audit">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>State</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in holidays %}
+                <tr>
+                    <td>{{ h.holiday_date.strftime('%d %b %Y') }}</td>
+                    <td>{{ h.state }}</td>
+                    <td>{{ h.description or '—' }}</td>
+                    <td><span class="status-badge badge-submitted">{{ h.holiday_type }}</span></td>
+                    <td>
+                        <form method="POST" action="/admin/holidays/delete/{{ h.id }}" style="display:inline"
+                              onsubmit="return confirm('Delete this holiday?')">
+                            <button type="submit" class="pill-btn pill-danger" style="padding:2px 10px;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">No holidays found.</div></div>
+    {% endif %}
+</div>
+{% endblock %}
