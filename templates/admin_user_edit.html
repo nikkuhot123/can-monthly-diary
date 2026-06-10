@@ -121,4 +121,32 @@
         <a href="/admin/users" class="pill-btn pill-outline">Cancel</a>
     </div>
 </form>
+
+{% if is_super_admin and target.is_admin and target.staff_no != '861198' %}
+<div class="card-audit mt-4" style="max-width:900px;border:1px solid var(--color-gold);">
+    <h5 class="mb-1" style="color:var(--color-gold);">Admin Permissions for {{ target.name }}</h5>
+    <p style="font-size:0.8rem;color:var(--color-muted);margin-bottom:16px;">
+        Control which admin sections this user can access.
+    </p>
+    <form method="POST" action="/admin/users/{{ target.id }}/permissions">
+        <div class="d-flex flex-wrap gap-3 mb-3">
+            {% set perm_labels = {
+                'users': 'Manage Users',
+                'holidays': 'Manage Holidays',
+                'diaries': 'View All Diaries',
+                'links': 'Linked Accounts',
+                'whatsapp': 'WhatsApp Import / Compute Leaves',
+            } %}
+            {% for perm in all_permissions %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="permissions" value="{{ perm }}"
+                       id="perm_{{ perm }}" {{ 'checked' if perm in target_perms }}>
+                <label class="form-check-label" for="perm_{{ perm }}">{{ perm_labels[perm] }}</label>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit" class="pill-btn pill-warning">Update Permissions</button>
+    </form>
+</div>
+{% endif %}
 {% endblock %}

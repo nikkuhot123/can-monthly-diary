@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database.db import get_db
 from database.models import User, MonthlyDiary, AttendanceRecord, Holiday
-from routers.auth import get_current_user, admin_required
+from routers.auth import (
+    get_current_user, admin_required, super_admin_required,
+    permission_required, is_super_admin, ALL_ADMIN_PERMISSIONS, SUPER_ADMIN_STAFF_NO,
+)
 from config import settings
 
 router = APIRouter()
@@ -15,7 +18,7 @@ templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/users")
-def list_users(request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
+def list_users(request: Request, db: Session = Depends(get_db), _=Depends(permission_required("users"))):
     user = get_current_user(request, db)
     users = db.query(User).order_by(User.staff_no).all()
     diary_counts = dict(
@@ -27,17 +30,17 @@ def list_users(request: Request, db: Session = Depends(get_db), _=Depends(admin_
         u.diary_count = diary_counts.get(u.id, 0)
     return templates.TemplateResponse("admin_users.html", {
         "request": request, "user": user, "users": users,
+        "is_super_admin": is_super_admin(user),
     })
 
 
 @router.get("/diaries")
-def all_diaries(request: Request, staff: str = None, db: Session = Depends(get_db), _=Depends(admin_required)):
+def all_diaries(request: Request, staff: str = None, db: Session = Depends(get_db), _=Depends(permission_required("diaries"))):
     user = get_current_user(request, db)
     q = db.query(MonthlyDiary).join(User, MonthlyDiary.user_id == User.id)
     if staff:
         q = q.filter(User.staff_no == staff)
     diaries = q.order_by(User.staff_no, MonthlyDiary.year.desc(), MonthlyDiary.month.desc()).all()
-    # Attach record counts
     counts = dict(
         db.query(AttendanceRecord.diary_id, func.count(AttendanceRecord.id))
         .group_by(AttendanceRecord.diary_id)
@@ -52,28 +55,34 @@ def all_diaries(request: Request, staff: str = None, db: Session = Depends(get_d
 
 
 @router.post("/toggle-admin/{user_id}")
-def toggle_admin(user_id: int, request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
+def toggle_admin(user_id: int, request: Request, db: Session = Depends(get_db), _=Depends(super_admin_required)):
+    """Only super admin can promote/demote admins."""
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
         raise HTTPException(status_code=404)
+    if target.staff_no == SUPER_ADMIN_STAFF_NO:
+        raise HTTPException(status_code=403, detail="Cannot demote super admin")
     target.is_admin = not target.is_admin
+    if not target.is_admin:
+        target.admin_permissions = ""
     db.commit()
     return RedirectResponse(url="/admin/users", status_code=302)
 
 
 @router.post("/toggle-active/{user_id}")
-def toggle_active(user_id: int, request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
+def toggle_active(user_id: int, request: Request, db: Session = Depends(get_db), _=Depends(permission_required("users"))):
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
         raise HTTPException(status_code=404)
+    if target.staff_no == SUPER_ADMIN_STAFF_NO:
+        raise HTTPException(status_code=403, detail="Cannot deactivate super admin")
     target.is_active = not target.is_active
     db.commit()
     return RedirectResponse(url="/admin/users", status_code=302)
 
 
 @router.get("/links")
-def list_links(request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
-    """View all Google account links stored in Firestore."""
+def list_links(request: Request, db: Session = Depends(get_db), _=Depends(permission_required("links"))):
     from services.firebase_service import list_all_user_links
     user = get_current_user(request, db)
     try:
@@ -90,8 +99,7 @@ def list_links(request: Request, db: Session = Depends(get_db), _=Depends(admin_
 
 
 @router.post("/unlink/{google_uid}")
-def unlink_user(google_uid: str, request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
-    """Remove a Google account link from Firestore."""
+def unlink_user(google_uid: str, request: Request, db: Session = Depends(get_db), _=Depends(permission_required("links"))):
     from services.firebase_service import delete_user_link
     user = get_current_user(request, db)
     try:
@@ -110,7 +118,7 @@ _ALL_STATES = sorted(settings.CANARA_BANK_GSTIN.keys())
 
 
 @router.get("/users/{user_id}/edit")
-def edit_user_page(user_id: int, request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
+def edit_user_page(user_id: int, request: Request, db: Session = Depends(get_db), _=Depends(permission_required("users"))):
     admin = get_current_user(request, db)
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
@@ -118,6 +126,9 @@ def edit_user_page(user_id: int, request: Request, db: Session = Depends(get_db)
     return templates.TemplateResponse("admin_user_edit.html", {
         "request": request, "user": admin, "target": target,
         "all_states": _ALL_STATES, "error": "", "success": "",
+        "all_permissions": ALL_ADMIN_PERMISSIONS,
+        "is_super_admin": is_super_admin(admin),
+        "target_perms": set(p.strip() for p in (target.admin_permissions or "").split(",") if p.strip()),
     })
 
 
@@ -126,7 +137,7 @@ def edit_user_save(
     user_id: int,
     request: Request,
     db: Session = Depends(get_db),
-    _=Depends(admin_required),
+    _=Depends(permission_required("users")),
     name: str = Form(""),
     staff_no: str = Form(""),
     mobile: str = Form(""),
@@ -197,13 +208,45 @@ def edit_user_save(
     return templates.TemplateResponse("admin_user_edit.html", {
         "request": request, "user": admin, "target": target,
         "all_states": _ALL_STATES, "error": "", "success": "User updated successfully.",
+        "all_permissions": ALL_ADMIN_PERMISSIONS,
+        "is_super_admin": is_super_admin(admin),
+        "target_perms": set(p.strip() for p in (target.admin_permissions or "").split(",") if p.strip()),
+    })
+
+
+@router.post("/users/{user_id}/permissions")
+def save_user_permissions(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    _=Depends(super_admin_required),
+    permissions: list[str] = Form(default=[]),
+):
+    """Super admin sets which permissions an admin user has."""
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404)
+    if target.staff_no == SUPER_ADMIN_STAFF_NO:
+        raise HTTPException(status_code=403, detail="Cannot restrict super admin")
+    valid = set(ALL_ADMIN_PERMISSIONS)
+    granted = [p for p in permissions if p in valid]
+    target.admin_permissions = ",".join(granted)
+    db.commit()
+    db.refresh(target)
+    admin = get_current_user(request, db)
+    return templates.TemplateResponse("admin_user_edit.html", {
+        "request": request, "user": admin, "target": target,
+        "all_states": _ALL_STATES, "error": "", "success": "Permissions updated.",
+        "all_permissions": ALL_ADMIN_PERMISSIONS,
+        "is_super_admin": True,
+        "target_perms": set(granted),
     })
 
 
 # ── Admin holidays ─────────────────────────────────────────────────────────────
 
 @router.get("/holidays")
-def admin_holidays_page(request: Request, db: Session = Depends(get_db), _=Depends(admin_required)):
+def admin_holidays_page(request: Request, db: Session = Depends(get_db), _=Depends(permission_required("holidays"))):
     admin = get_current_user(request, db)
     holidays = db.query(Holiday).order_by(Holiday.holiday_date.desc()).limit(60).all()
     return templates.TemplateResponse("admin_holidays.html", {
@@ -217,7 +260,7 @@ def admin_holidays_page(request: Request, db: Session = Depends(get_db), _=Depen
 def admin_add_holiday(
     request: Request,
     db: Session = Depends(get_db),
-    _=Depends(admin_required),
+    _=Depends(permission_required("holidays")),
     holiday_date: str = Form(...),
     state: str = Form("Maharashtra"),
     description: str = Form(""),
@@ -271,7 +314,7 @@ def admin_add_holiday(
 @router.post("/holidays/delete/{holiday_id}")
 def admin_delete_holiday(
     holiday_id: int, request: Request,
-    db: Session = Depends(get_db), _=Depends(admin_required),
+    db: Session = Depends(get_db), _=Depends(permission_required("holidays")),
 ):
     h = db.query(Holiday).filter(Holiday.id == holiday_id).first()
     if h:

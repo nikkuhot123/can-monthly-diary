@@ -26,6 +26,7 @@ class User(Base):
     hashed_password  = Column(String(255), nullable=False)
     is_active        = Column(Boolean, default=True)
     is_admin         = Column(Boolean, default=False)
+    admin_permissions = Column(Text, default="")   # comma-sep: users,holidays,diaries,links,whatsapp
     created_at       = Column(DateTime, server_default=func.now())
     address_line1    = Column(String(200))
     address_line2    = Column(String(200))

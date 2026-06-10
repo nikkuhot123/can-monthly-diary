@@ -23,6 +23,13 @@ from config import settings, FIREBASE, ADMIN_EMAILS
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+SUPER_ADMIN_STAFF_NO = "861198"
+ALL_ADMIN_PERMISSIONS = ["users", "holidays", "diaries", "links", "whatsapp"]
+
+
+def is_super_admin(user) -> bool:
+    return user is not None and user.staff_no == SUPER_ADMIN_STAFF_NO
+
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -56,13 +63,41 @@ def login_required(request: Request, db: Session = Depends(get_db)):
 
 
 def admin_required(request: Request, db: Session = Depends(get_db)):
-    """Dependency: admin-only access. Checks SQLite user.is_admin field."""
+    """Dependency: admin-only access."""
     user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=302, detail="Login required")
-    if not user.is_admin:
+    if not user.is_admin and not is_super_admin(user):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+
+def super_admin_required(request: Request, db: Session = Depends(get_db)):
+    """Dependency: super admin only (staff 861198)."""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=302, detail="Login required")
+    if not is_super_admin(user):
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return user
+
+
+def permission_required(perm: str):
+    """Factory: returns dependency that checks admin has specific permission.
+    Super admin always passes. Regular admin must have perm in admin_permissions."""
+    def _check(request: Request, db: Session = Depends(get_db)):
+        user = get_current_user(request, db)
+        if not user:
+            raise HTTPException(status_code=302, detail="Login required")
+        if is_super_admin(user):
+            return user
+        if not user.is_admin:
+            raise HTTPException(status_code=403, detail="Admin access required")
+        perms = set(p.strip() for p in (user.admin_permissions or "").split(",") if p.strip())
+        if perm not in perms:
+            raise HTTPException(status_code=403, detail=f"Permission '{perm}' required")
+        return user
+    return _check
 
 
 @router.get("/login")
@@ -133,7 +168,15 @@ def _google_login_inner(request, id_token, db):
                 sqlite_user.email = google_email
             db.commit()
 
-        is_admin = google_email in (e.strip() for e in ADMIN_EMAILS) or sqlite_user.is_admin
+        is_admin = (
+            google_email in (e.strip() for e in ADMIN_EMAILS)
+            or sqlite_user.is_admin
+            or sqlite_user.staff_no == SUPER_ADMIN_STAFF_NO
+        )
+        # Ensure super admin always has is_admin set in DB
+        if sqlite_user.staff_no == SUPER_ADMIN_STAFF_NO and not sqlite_user.is_admin:
+            sqlite_user.is_admin = True
+            db.commit()
         token = create_access_token({
             "user_id": sqlite_user.id,
             "staff_no": sqlite_user.staff_no,

@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database.db import get_db
 from database.models import User, MonthlyDiary, AttendanceRecord
-from routers.auth import get_current_user, admin_required
+from routers.auth import get_current_user, admin_required, permission_required
 from services.whatsapp_parser import process_whatsapp_upload
 from services.calendar_utils import get_bank_holidays_for_month, is_bank_holiday, get_bank_holiday_reason, build_month_calendar
 from services.holiday_service import get_holiday
@@ -169,7 +169,7 @@ def calendar_view(
 def upload_whatsapp_page(
     request: Request, diary_id: int,
     db: Session = Depends(get_db),
-    _=Depends(admin_required),
+    _=Depends(permission_required("whatsapp")),
 ):
     user = get_current_user(request, db)
     diary = db.query(MonthlyDiary).filter(
@@ -188,7 +188,7 @@ async def upload_whatsapp(
     diary_id: int = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _=Depends(admin_required),
+    _=Depends(permission_required("whatsapp")),
 ):
     user = get_current_user(request, db)
     diary = db.query(MonthlyDiary).filter(
@@ -390,7 +390,7 @@ def add_attendance(
 def delete_attendance(
     record_id: int, request: Request,
     db: Session = Depends(get_db),
-    _=Depends(admin_required),
+    _=Depends(permission_required("users")),
 ):
     user = get_current_user(request, db)
     record = db.query(AttendanceRecord).filter(
@@ -450,7 +450,7 @@ def edit_diary(
 def compute_leaves(
     diary_id: int, request: Request,
     db: Session = Depends(get_db),
-    _=Depends(admin_required),
+    _=Depends(permission_required("whatsapp")),
 ):
     user = get_current_user(request, db)
     diary = db.query(MonthlyDiary).filter(

@@ -18,6 +18,7 @@ def _run_migrations():
         existing = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(users)")).fetchall()}
         pending = {
             "google_uid": "VARCHAR(128)",
+            "admin_permissions": "TEXT DEFAULT ''",
         }
         for col, typ in pending.items():
             if col not in existing:
