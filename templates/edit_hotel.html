@@ -2,32 +2,34 @@
 {% block title %}Edit Hotel{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Edit Hotel</h2>
-    <a href="/hotel/list/{{ stay.diary_id }}" class="pill-btn pill-outline">← Back to Hotels</a>
+    <h1>Edit Hotel</h1>
+    <div class="page-header-actions">
+        <a href="/hotel/list/{{ stay.diary_id }}" class="btn btn-outline btn-sm">← Back to Hotels</a>
+    </div>
 </div>
-<div class="card-audit" style="max-width:700px;">
-    <form method="POST" action="/hotel/edit/{{ stay.id }}" class="form-audit">
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label>Hotel Name</label>
-                <input type="text" name="hotel_name" class="form-control" value="{{ stay.hotel_name }}" required>
+<div class="card" style="max-width:720px;">
+    <form method="POST" action="/hotel/edit/{{ stay.id }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Hotel Name</label>
+                <input type="text" name="hotel_name" class="form-input" value="{{ stay.hotel_name }}" required>
             </div>
-            <div class="col-md-6 mb-3">
-                <label>City</label>
-                <input type="text" name="city" class="form-control" value="{{ stay.city }}" required>
+            <div class="form-group">
+                <label class="form-label">City</label>
+                <input type="text" name="city" class="form-input" value="{{ stay.city }}" required>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label>Check In Date</label>
-                <input type="date" name="checkin_date" class="form-control" value="{{ stay.checkin_date }}" required>
+        <div class="form-row-3">
+            <div class="form-group">
+                <label class="form-label">Check In Date</label>
+                <input type="date" name="checkin_date" class="form-input" value="{{ stay.checkin_date }}" required>
             </div>
-            <div class="col-md-4 mb-3">
-                <label>Check In Time</label>
-                <input type="time" name="checkin_time" class="form-control" value="{{ stay.checkin_time or '12:00' }}">
+            <div class="form-group">
+                <label class="form-label">Check In Time</label>
+                <input type="time" name="checkin_time" class="form-input" value="{{ stay.checkin_time or '12:00' }}">
             </div>
-            <div class="col-md-4 mb-3">
-                <label>Hotel Type</label>
+            <div class="form-group">
+                <label class="form-label">Hotel Type</label>
                 <select name="hotel_type" class="form-select">
                     <option value="ThreeStar" {% if stay.hotel_type == 'ThreeStar' %}selected{% endif %}>Three Star</option>
                     <option value="FourStar" {% if stay.hotel_type == 'FourStar' %}selected{% endif %}>Four Star</option>
@@ -36,55 +38,57 @@
                 </select>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label>Check Out Date</label>
-                <input type="date" name="checkout_date" class="form-control" value="{{ stay.checkout_date }}" required>
+        <div class="form-row-3">
+            <div class="form-group">
+                <label class="form-label">Check Out Date</label>
+                <input type="date" name="checkout_date" class="form-input" value="{{ stay.checkout_date }}" required>
             </div>
-            <div class="col-md-4 mb-3">
-                <label>Check Out Time</label>
-                <input type="time" name="checkout_time" class="form-control" value="{{ stay.checkout_time or '12:00' }}">
+            <div class="form-group">
+                <label class="form-label">Check Out Time</label>
+                <input type="time" name="checkout_time" class="form-input" value="{{ stay.checkout_time or '12:00' }}">
             </div>
-            <div class="col-md-4 mb-3">
-                <label>GST Percent</label>
-                <input type="number" step="0.01" name="gst_percent" class="form-control" value="{{ stay.gst_percent or 12.0 }}">
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label>Lodging Amount (₹)</label>
-                <input type="number" step="0.01" name="lodging_amount" class="form-control" value="{{ stay.lodging_amount or 0 }}">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label>Boarding Amount (₹)</label>
-                <input type="number" step="0.01" name="boarding_amount" class="form-control" value="{{ stay.boarding_amount or 0 }}">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label>Vendor GSTIN</label>
-                <input type="text" name="vendor_gstin" class="form-control" value="{{ stay.vendor_gstin or '' }}">
+            <div class="form-group">
+                <label class="form-label">GST Percent</label>
+                <input type="number" step="0.01" name="gst_percent" class="form-input" value="{{ stay.gst_percent or 12.0 }}">
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label>Invoice Date</label>
-                <input type="date" name="invoice_date" class="form-control" value="{{ stay.invoice_date or '' }}">
+        <div class="form-row-3">
+            <div class="form-group">
+                <label class="form-label">Lodging Amount (₹)</label>
+                <input type="number" step="0.01" name="lodging_amount" class="form-input" value="{{ stay.lodging_amount or 0 }}">
             </div>
-            <div class="col-md-4 mb-3">
-                <label>Invoice Number</label>
-                <input type="text" name="invoice_number" class="form-control" value="{{ stay.invoice_number or '' }}">
+            <div class="form-group">
+                <label class="form-label">Boarding Amount (₹)</label>
+                <input type="number" step="0.01" name="boarding_amount" class="form-input" value="{{ stay.boarding_amount or 0 }}">
             </div>
-            <div class="col-md-4 mb-3">
-                <label class="d-block">&nbsp;</label>
-                <label class="toggle-switch" style="margin-top:8px;">
-                    <input type="checkbox" name="no_bill" value="true" {% if stay.no_bill %}checked{% endif %}>
-                    <span class="toggle-slider"></span>
-                    <span style="margin-left:8px;font-size:0.8rem;">No Bill</span>
-                </label>
+            <div class="form-group">
+                <label class="form-label">Vendor GSTIN</label>
+                <input type="text" name="vendor_gstin" class="form-input" value="{{ stay.vendor_gstin or '' }}">
             </div>
         </div>
-        <div style="display:flex;gap:8px;">
-            <button type="submit" class="pill-btn pill-primary">Update</button>
-            <a href="/hotel/list/{{ stay.diary_id }}" class="pill-btn pill-outline">Cancel</a>
+        <div class="form-row-3">
+            <div class="form-group">
+                <label class="form-label">Invoice Date</label>
+                <input type="date" name="invoice_date" class="form-input" value="{{ stay.invoice_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Invoice Number</label>
+                <input type="text" name="invoice_number" class="form-input" value="{{ stay.invoice_number or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">&nbsp;</label>
+                <div class="toggle-wrapper">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="no_bill" value="true" {% if stay.no_bill %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">No Bill</span>
+                </div>
+            </div>
+        </div>
+        <div class="btn-group" style="margin-top:24px;">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a href="/hotel/list/{{ stay.diary_id }}" class="btn btn-outline">Cancel</a>
         </div>
     </form>
 </div>

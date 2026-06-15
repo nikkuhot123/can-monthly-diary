@@ -1,30 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Holidays{% endblock %}
+{% block title %}Holidays - Audit Diary{% endblock %}
 {% block content %}
 <div class="page-header">
     <h2>Holiday Calendar</h2>
     {% if user.is_admin %}
-    <button class="pill-btn pill-gold" data-bs-toggle="collapse" data-bs-target="#addHolidayForm">+ Add Holiday</button>
+    <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#addHolidayForm">+ Add Holiday</button>
     {% endif %}
 </div>
 
 {% if user.is_admin %}
-<div class="collapse mb-3" id="addHolidayForm">
-    <div class="card-audit">
-        <form method="POST" class="form-audit" style="max-width:600px;">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label>Date</label>
-                    <input type="date" name="holiday_date" class="form-control" required>
+<div class="collapse mb-5" id="addHolidayForm">
+    <div class="card" style="max-width:600px;">
+        <form method="POST">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="holiday_date" class="form-input" required>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label>Description</label>
-                    <input type="text" name="description" class="form-control" required>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" name="description" class="form-input" required>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label>State</label>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">State</label>
                     <select name="state" class="form-select">
                         <option value="All India">All India</option>
                         <option value="Maharashtra">Maharashtra</option>
@@ -32,8 +32,8 @@
                         <option value="Delhi">Delhi</option>
                     </select>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label>Year</label>
+                <div class="form-group">
+                    <label class="form-label">Year</label>
                     <select name="year" class="form-select">
                         {% for y in range(now.year - 1, now.year + 3) %}
                         <option value="{{ y }}" {% if y == now.year %}selected{% endif %}>{{ y }}</option>
@@ -41,48 +41,50 @@
                     </select>
                 </div>
             </div>
-            <button type="submit" class="pill-btn pill-primary">Add Holiday</button>
+            <button type="submit" class="btn btn-primary">Add Holiday</button>
         </form>
     </div>
 </div>
 {% endif %}
 
-<div class="card-audit">
-    {% if holidays %}
-    <div class="table-responsive">
-        <table class="table table-audit">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Day</th>
-                    <th>Description</th>
-                    <th>State</th>
-                    <th>Type</th>
-                    {% if user.is_admin %}<th>Actions</th>{% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for h in holidays %}
-                <tr>
-                    <td>{{ h.holiday_date }}</td>
-                    <td>{{ h.day_name or '' }}</td>
-                    <td>{{ h.description }}</td>
-                    <td>{{ h.state }}</td>
-                    <td><span class="status-badge badge-holiday" style="background:var(--color-holiday-bg);color:var(--color-holiday);">{{ h.holiday_type or 'Bank' }}</span></td>
-                    {% if user.is_admin %}
-                    <td>
-                        <form method="POST" action="/holidays/delete/{{ h.id }}" style="display:inline" onsubmit="return confirm('Delete this holiday?')">
-                            <button type="submit" class="pill-btn pill-danger" style="padding:2px 10px;">Delete</button>
-                        </form>
-                    </td>
-                    {% endif %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state"><div class="empty-icon">🎉</div><div class="empty-text">No holidays found for the selected criteria.</div></div>
-    {% endif %}
+{% if holidays %}
+<div class="table-wrapper">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Description</th>
+                <th>State</th>
+                <th>Type</th>
+                {% if user.is_admin %}<th>Actions</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in holidays %}
+            <tr class="table-row-animate">
+                <td>{{ h.holiday_date }}</td>
+                <td>{{ h.day_name or '' }}</td>
+                <td>{{ h.description }}</td>
+                <td>{{ h.state }}</td>
+                <td><span class="badge badge-holiday">{{ h.holiday_type or 'Bank' }}</span></td>
+                {% if user.is_admin %}
+                <td>
+                    <form method="POST" action="/holidays/delete/{{ h.id }}" style="display:inline" onsubmit="return confirm('Delete this holiday?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">🎉</div>
+    <div class="empty-state-title">No Holidays Found</div>
+    <div class="empty-state-text">No holidays found for the selected criteria.</div>
+</div>
+{% endif %}
 {% endblock %}

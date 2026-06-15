@@ -2,29 +2,36 @@
 {% block title %}Hotels - {{ diary.month }}/{{ diary.year }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Hotels · {{ diary.month }}/{{ diary.year }}</h2>
-    <a href="/hotel/add/{{ diary.id }}" class="pill-btn pill-gold">+ Add New</a>
-</div>
-{% if stays %}
-{% for r in stays %}
-<div class="card-audit expense-card">
-    <div class="expense-info">
-        <div class="expense-title">{{ r.hotel_name }}, {{ r.city }}</div>
-        <div class="expense-detail">{{ r.checkin_date }} → {{ r.checkout_date }}</div>
+    <h1>Hotels</h1>
+    <div class="page-header-actions">
+        <a href="/hotel/add/{{ diary.id }}" class="btn btn-primary">+ Add New</a>
     </div>
-    <div class="expense-amount">₹{{ '%.2f'|format(r.total_lb) }}</div>
-    <div class="expense-actions">
-        <a href="/hotel/edit/{{ r.id }}" class="pill-btn pill-warning" style="padding:2px 10px;">Edit</a>
+</div>
+
+{% if stays %}
+<div style="display:flex; flex-direction:column; gap:12px;">
+{% for r in stays %}
+<div class="card expense-card" style="animation: fade-in 0.3s ease forwards; animation-delay: {{ loop.index0 * 0.06 }}s; opacity: 0;">
+    <div class="expense-card-icon">🏨</div>
+    <div class="expense-card-body">
+        <div class="expense-card-title">{{ r.hotel_name }}, {{ r.city }}</div>
+        <div class="expense-card-detail">{{ r.checkin_date }} → {{ r.checkout_date }}</div>
+    </div>
+    <div class="expense-card-amount">₹{{ '%.2f'|format(r.total_lb or 0) }}</div>
+    <div class="expense-card-actions">
+        <a href="/hotel/edit/{{ r.id }}" class="btn btn-ghost btn-sm">Edit</a>
         <form method="POST" action="/hotel/delete/{{ r.id }}" style="display:inline" onsubmit="return confirm('Delete this record?')">
-            <button type="submit" class="pill-btn pill-danger" style="padding:2px 10px;">Delete</button>
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
         </form>
     </div>
 </div>
 {% endfor %}
+</div>
 {% else %}
 <div class="empty-state">
-    <div class="empty-icon">🏨</div>
-    <div class="empty-text">No hotel records. Click "+ Add New" to add one.</div>
+    <div class="empty-state-icon">🏨</div>
+    <div class="empty-state-title">No hotel records</div>
+    <div class="empty-state-text">Click "+ Add New" to add a hotel record.</div>
 </div>
 {% endif %}
 {% endblock %}

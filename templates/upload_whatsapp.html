@@ -3,23 +3,21 @@
 {% block content %}
 <div class="page-header">
     <h2>Upload WhatsApp Attendance</h2>
-    <a href="/attendance/calendar?diary_id={{ diary.id }}" class="pill-btn pill-outline">← Back to Calendar</a>
+    <a href="/attendance/calendar?diary_id={{ diary.id }}" class="btn btn-outline">← Back to Calendar</a>
 </div>
 
 {% if error %}
-<div class="card-audit mt-3" style="border-left:4px solid var(--color-danger);">
-    <div class="card-body">
-        <p style="color:var(--color-danger);"><strong>Error:</strong> {{ error }}</p>
-    </div>
+<div class="card mb-5" style="border-left:4px solid var(--danger-500);">
+    <p style="color:var(--danger-500);margin:0;"><strong>Error:</strong> {{ error }}</p>
 </div>
 {% endif %}
 
 {% if result %}
-<div class="card-audit mt-3">
-    <div class="card-header-audit">Upload Results</div>
-    <div class="card-body">
-        <p>Total messages parsed: {{ result.total_messages }} | New records: {{ result.total_new }} | Users matched: {{ result.total_users }}</p>
-        <table class="table-audit">
+<div class="card mb-5">
+    <h3 class="mb-3">Upload Results</h3>
+    <p class="text-secondary mb-4">Total messages parsed: {{ result.total_messages }} | New records: {{ result.total_new }} | Users matched: {{ result.total_users }}</p>
+    <div class="table-wrapper">
+        <table class="table-modern">
             <thead>
                 <tr>
                     <th>Staff</th>
@@ -32,7 +30,7 @@
             <tbody>
             {% for key, u in result.results_by_user.items() %}
                 <tr>
-                    <td>{{ u.user_name }} ({{ u.staff_no }}){% if u.auto_created %} <span class="badge badge-auto-create">Auto-created</span>{% endif %}</td>
+                    <td>{{ u.user_name }} ({{ u.staff_no }}){% if u.auto_created %} <span class="badge badge-warning badge-sm">Auto-created</span>{% endif %}</td>
                     <td>{{ u.new }}</td>
                     <td>{{ u.duplicates }}</td>
                     <td>{{ u.leaves }}</td>
@@ -45,17 +43,76 @@
 </div>
 {% endif %}
 
-<div class="card-audit" style="max-width:600px;">
-    <form method="POST" action="/attendance/upload-whatsapp" enctype="multipart/form-data" class="form-audit">
+<div class="card" style="max-width:600px;">
+    <form method="POST" action="/attendance/upload-whatsapp" enctype="multipart/form-data" id="uploadForm">
         <input type="hidden" name="diary_id" value="{{ diary.id }}">
-        <div class="mb-3">
-            <label>Select WhatsApp Chat Export File</label>
-            <input type="file" name="file" class="form-control" accept=".txt" required>
+        <div class="mb-4">
+            <label class="form-label" style="font-size:0.85rem;font-weight:600;">Select WhatsApp Chat Export File</label>
+            <div class="dropzone" id="dropZone">
+                <div class="dropzone-icon">&#128196;</div>
+                <div class="dropzone-text">
+                    <strong>Click to browse</strong> or drag &amp; drop your file here
+                </div>
+                <div class="dropzone-filename" id="fileName" style="display:none;"></div>
+                <input type="file" name="file" id="fileInput" accept=".txt" required
+                       style="position:absolute;inset:0;opacity:0;cursor:pointer;">
+            </div>
         </div>
-        <small style="color:var(--color-muted);">Upload the .txt file exported from WhatsApp chat.</small>
-        <div style="margin-top:16px;">
-            <button type="submit" class="pill-btn pill-primary">Upload &amp; Parse</button>
-        </div>
+        <small class="text-tertiary" style="display:block;margin-bottom:16px;">Upload the .txt file exported from WhatsApp chat.</small>
+        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Import Chat</button>
     </form>
 </div>
+
+<script>
+(function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const submitBtn = document.getElementById('submitBtn');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function() {
+            dropZone.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function() {
+            dropZone.classList.remove('drag-over');
+        });
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            fileInput.files = files;
+            updateFileState();
+        }
+    });
+
+    fileInput.addEventListener('change', updateFileState);
+
+    function updateFileState() {
+        if (fileInput.files.length > 0) {
+            fileName.textContent = fileInput.files[0].name;
+            fileName.style.display = 'block';
+            submitBtn.disabled = false;
+        } else {
+            fileName.style.display = 'none';
+            submitBtn.disabled = true;
+        }
+    }
+
+    dropZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+})();
+</script>
 {% endblock %}

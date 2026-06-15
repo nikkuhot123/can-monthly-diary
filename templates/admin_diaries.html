@@ -2,54 +2,74 @@
 {% block title %}All Diaries - Admin{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>All Diaries</h2>
-    <span style="color:var(--color-muted);font-size:0.85rem;">{{ diaries|length }} diaries across {{ user_count }} staff</span>
+    <h1>All Diaries</h1>
+    <span class="text-small text-secondary">{{ diaries|length }} diaries across {{ user_count }} staff</span>
 </div>
 
-<div class="card-audit mb-3" style="padding:12px 16px;">
-    <input type="text" id="diary-search" class="form-control" placeholder="Search by staff no, name, month…" style="max-width:360px;">
-</div>
+<form method="GET" action="/admin/diaries" class="filter-bar">
+    <input type="text" id="diary-search" name="search" class="form-input" placeholder="Search by staff no, name, month…" value="{{ request.query_params.get('search', '') }}" style="min-width:220px;">
+    <select name="month" class="form-select">
+        <option value="">All Months</option>
+        {% for m in range(1, 13) %}
+        <option value="{{ m }}" {{ 'selected' if request.query_params.get('month')|string == m|string }}>{{ '%02d'|format(m) }}</option>
+        {% endfor %}
+    </select>
+    <select name="year" class="form-select">
+        <option value="">All Years</option>
+        {% for y in range(2023, 2027) %}
+        <option value="{{ y }}" {{ 'selected' if request.query_params.get('year')|string == y|string }}>{{ y }}</option>
+        {% endfor %}
+    </select>
+    <select name="status" class="form-select">
+        <option value="">All Status</option>
+        <option value="draft" {{ 'selected' if request.query_params.get('status') == 'draft' }}>Draft</option>
+        <option value="submitted" {{ 'selected' if request.query_params.get('status') == 'submitted' }}>Submitted</option>
+        <option value="reviewed" {{ 'selected' if request.query_params.get('status') == 'reviewed' }}>Reviewed</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Filter</button>
+</form>
 
-<div class="card-audit">
-    {% if diaries %}
-    <div class="table-responsive">
-        <table class="table table-audit" id="diary-table">
-            <thead>
-                <tr>
-                    <th>Staff No</th>
-                    <th>Name</th>
-                    <th>Month / Year</th>
-                    <th>Bank State</th>
-                    <th>Records</th>
-                    <th>Status</th>
-                    <th>Grand Total</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for d in diaries %}
-                <tr data-search="{{ (d.user.staff_no if d.user else '') }} {{ (d.user.name if d.user else '') }} {{ d.month }} {{ d.year }}">
-                    <td><strong>{{ d.user.staff_no if d.user else '—' }}</strong></td>
-                    <td>{{ d.user.name if d.user else 'User #' ~ d.user_id }}</td>
-                    <td>{{ d.month }}/{{ d.year }}</td>
-                    <td>{{ d.bank_state or '—' }}</td>
-                    <td>{{ d.record_count }}</td>
-                    <td><span class="status-badge badge-{% if d.status == 'draft' %}draft{% elif d.status == 'submitted' %}submitted{% else %}reviewed{% endif %}">{{ d.status|title }}</span></td>
-                    <td>₹{{ '%.2f'|format(d.grand_total or 0) }}</td>
-                    <td style="white-space:nowrap;">
-                        <a href="/attendance/calendar?diary_id={{ d.id }}" class="pill-btn pill-primary" style="padding:2px 10px;">Calendar</a>
-                        <a href="/generate/preview/{{ d.id }}" class="pill-btn pill-info" style="padding:2px 10px;">Preview</a>
-                        <a href="/generate/download-excel/{{ d.id }}" class="pill-btn pill-success" style="padding:2px 10px;">Excel</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state"><div class="empty-icon">📓</div><div class="empty-text">No diaries found.</div></div>
-    {% endif %}
+{% if diaries %}
+<div class="table-wrapper">
+    <table class="table-modern" id="diary-table">
+        <thead>
+            <tr>
+                <th>Staff No</th>
+                <th>Name</th>
+                <th>Month / Year</th>
+                <th>Bank State</th>
+                <th>Records</th>
+                <th>Status</th>
+                <th>Grand Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in diaries %}
+            <tr data-search="{{ (d.user.staff_no if d.user else '') }} {{ (d.user.name if d.user else '') }} {{ d.month }} {{ d.year }}">
+                <td><strong>{{ d.user.staff_no if d.user else '—' }}</strong></td>
+                <td>{{ d.user.name if d.user else 'User #' ~ d.user_id }}</td>
+                <td>{{ d.month }}/{{ d.year }}</td>
+                <td>{{ d.bank_state or '—' }}</td>
+                <td>{{ d.record_count }}</td>
+                <td><span class="badge {% if d.status == 'draft' %}badge-draft{% elif d.status == 'submitted' %}badge-submitted{% else %}badge-reviewed{% endif %}">{{ d.status|title }}</span></td>
+                <td>₹{{ '%.2f'|format(d.grand_total or 0) }}</td>
+                <td style="white-space:nowrap;">
+                    <a href="/attendance/calendar?diary_id={{ d.id }}" class="btn btn-outline btn-sm">Calendar</a>
+                    <a href="/generate/preview/{{ d.id }}" class="btn btn-ghost btn-sm">Preview</a>
+                    <a href="/generate/download-excel/{{ d.id }}" class="btn btn-ghost btn-sm" style="color:var(--success-500);">Excel</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">&#128211;</div>
+    <div class="empty-state-text">No diaries found.</div>
+</div>
+{% endif %}
 
 <script>
 document.getElementById('diary-search').addEventListener('input', function() {

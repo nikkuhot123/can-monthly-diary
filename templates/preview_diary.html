@@ -1,117 +1,242 @@
 {% extends "base.html" %}
-{% block title %}Preview - {{ diary.month }}/{{ diary.year }}{% endblock %}
+{% block title %}{{ month_name }} {{ diary.year }} — Preview{% endblock %}
 
-{% set ns = namespace(travel_total=0, hotel_total=0, local_other_total=0) %}
+{% set ns = namespace(travel_total=0, hotel_total=0, local_other_total=0, present=0, leave=0, holiday=0, weekend=0, missing=0) %}
 {% for t in travel %}{% set ns.travel_total = ns.travel_total + (t.total_amount or 0) %}{% endfor %}
 {% for h in hotels %}{% set ns.hotel_total = ns.hotel_total + (h.total_claimed_exc_gst or h.total_lb or 0) %}{% endfor %}
 {% for l in local %}{% set ns.local_other_total = ns.local_other_total + (l.claimed_amount_exc_gst or 0) + (l.claimed_gst or 0) %}{% endfor %}
 {% for o in other %}{% set ns.local_other_total = ns.local_other_total + (o.claimed_amount_exc_gst or 0) + (o.claimed_gst or 0) %}{% endfor %}
 {% set grand_total = ns.travel_total + ns.hotel_total + ns.local_other_total %}
+{% for a in attendance %}
+{%- if a.is_leave %}{% set ns.leave = ns.leave + 1 %}
+{%- elif a.is_holiday %}{% set ns.holiday = ns.holiday + 1 %}
+{%- elif a.is_weekend %}{% set ns.weekend = ns.weekend + 1 %}
+{%- else %}{% set ns.present = ns.present + 1 %}
+{%- endif %}{% endfor %}
 
 {% block content %}
 <div class="page-header">
-    <h2>Preview: {{ month_name or (diary.month ~ '/' ~ diary.year) }}</h2>
-    <div style="display:flex;gap:8px;">
-        <a href="/generate/download-excel/{{ diary.id }}" class="pill-btn pill-success">Download TA Excel</a>
-        <a href="/generate/download-hrms/{{ diary.id }}" class="pill-btn pill-outline">Download HRMS Excel</a>
-        <form method="POST" action="/generate/submit/{{ diary.id }}" style="display:inline">
-            <button type="submit" class="pill-btn pill-gold">Submit Diary</button>
+    <div>
+        <h1>{{ month_name }} {{ diary.year }} — Preview</h1>
+        <div class="flex items-center gap-2 mt-1">
+            <span class="text-small text-secondary">{{ diary.bank_state }}</span>
+            <span class="badge badge-{{ diary.status }}">{{ diary.status }}</span>
+        </div>
+    </div>
+    <div class="page-header-actions">
+        <a href="/generate/download-excel/{{ diary.id }}" class="btn btn-primary btn-sm">&#8681; Download TA</a>
+        <a href="/generate/download-hrms/{{ diary.id }}" class="btn btn-secondary btn-sm">&#8681; Download HRMS</a>
+        <form method="POST" action="/generate/submit/{{ diary.id }}" style="display:inline;">
+            <button type="submit" class="btn btn-outline btn-sm">Submit</button>
         </form>
     </div>
 </div>
 
-<div class="card-audit border-draft mb-4">
-    <div class="row">
-        <div class="col-md-3"><strong>Staff:</strong> {{ user.name }}</div>
-        <div class="col-md-2"><strong>No:</strong> {{ user.staff_no }}</div>
-        <div class="col-md-3"><strong>Designation:</strong> {{ user.designation or 'N/A' }}</div>
-        <div class="col-md-2"><strong>Section:</strong> {{ user.section or 'N/A' }}</div>
-        <div class="col-md-2"><strong>Zone:</strong> {{ user.zone or 'N/A' }}</div>
+<!-- Staff Info Card -->
+<div class="card card-compact mb-5 border-accent">
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">Staff No</span>
+            <span class="info-value">{{ user.staff_no }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Name</span>
+            <span class="info-value">{{ user.name }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Designation</span>
+            <span class="info-value">{{ user.designation or '—' }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Zone</span>
+            <span class="info-value">{{ user.zone or '—' }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">DP Code</span>
+            <span class="info-value">{{ user.dp_code or '—' }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Section</span>
+            <span class="info-value">{{ user.section or '—' }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Basic Pay</span>
+            <span class="info-value">{{ user.basic_pay or '—' }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">City Category</span>
+            <span class="info-value">{{ user.city_category or '—' }}</span>
+        </div>
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-6 col-md-3 mb-3">
-        <div class="stat-card"><div class="stat-label">Travel</div><div class="stat-value">₹{{ '%.2f'|format(ns.travel_total) }}</div></div>
-    </div>
-    <div class="col-6 col-md-3 mb-3">
-        <div class="stat-card"><div class="stat-label">Lodging</div><div class="stat-value">₹{{ '%.2f'|format(ns.hotel_total) }}</div></div>
-    </div>
-    <div class="col-6 col-md-3 mb-3">
-        <div class="stat-card"><div class="stat-label">Local + Other</div><div class="stat-value">₹{{ '%.2f'|format(ns.local_other_total) }}</div></div>
-    </div>
-    <div class="col-6 col-md-3 mb-3">
-        <div class="stat-card stat-card-navy"><div class="stat-label">Grand Total</div><div class="stat-value" style="color:var(--color-gold);">₹{{ '%.2f'|format(grand_total) }}</div></div>
-    </div>
-</div>
-
-<div class="card-audit mb-4">
-    <h5 style="margin-bottom:12px;">Attendance ({{ attendance|length }} days)</h5>
+<!-- Attendance Summary -->
+<div class="card mb-5">
+    <h2>Attendance Summary</h2>
     <div class="mini-calendar">
         {% for a in attendance %}
-        {% set color_class = 'present' if not a.is_leave and not a.is_holiday else ('leave' if a.is_leave else 'holiday') %}
-        <div class="mini-day mini-{{ color_class }}" title="{{ a.duty_date }}: {{ color_class|title }}"></div>
+        {%- set day_class = 'present' if not a.is_leave and not a.is_holiday and not a.is_weekend else ('leave' if a.is_leave else ('holiday' if a.is_holiday else 'weekend')) %}
+        <div class="mini-day {{ day_class }}" title="{{ a.duty_date }}"></div>
         {% endfor %}
     </div>
+    <div class="flex gap-4 flex-wrap">
+        <span class="text-small">Present: <strong>{{ ns.present }}</strong></span>
+        <span class="text-small">Leave: <strong>{{ ns.leave }}</strong></span>
+        <span class="text-small">Holiday: <strong>{{ ns.holiday }}</strong></span>
+        <span class="text-small">Weekend: <strong>{{ ns.weekend }}</strong></span>
+        <span class="text-small">Total: <strong>{{ attendance|length }}</strong></span>
+    </div>
 </div>
 
-<div class="card-audit mb-4">
-    <h5 style="margin-bottom:12px;">Travel</h5>
+<!-- Travel Section -->
+<div class="card mb-5">
+    <h2>Travel</h2>
     {% if travel %}
-    {% for t in travel %}
-    <div class="expense-card" style="border-left:3px solid var(--color-info);margin-bottom:4px;">
-        <div class="expense-info">
-            <div class="expense-title">{{ t.from_place }} → {{ t.to_place }}</div>
-            <div class="expense-detail">{{ t.mode }} · {{ t.date_start }}</div>
-        </div>
-        <div class="expense-amount">₹{{ '%.2f'|format(t.total_amount or 0) }}</div>
+    <div class="table-wrapper">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Mode</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in travel %}
+                <tr class="table-row-animate">
+                    <td>{{ t.date_start }}</td>
+                    <td>{{ t.from_place }}</td>
+                    <td>{{ t.to_place }}</td>
+                    <td><span class="badge badge-info badge-sm">{{ t.mode }}</span></td>
+                    <td><strong>&#8377; {{ "%.2f"|format(t.total_amount or 0) }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    {% endfor %}
     {% else %}
-    <p style="color:var(--color-muted);margin:0;">No travel records.</p>
+    <div class="empty-state empty-state-compact">
+        <div class="empty-state-icon">&#9992;</div>
+        <div class="empty-state-title">No travel records</div>
+        <div class="empty-state-text">No travel entries for this month.</div>
+    </div>
     {% endif %}
 </div>
 
-<div class="card-audit mb-4">
-    <h5 style="margin-bottom:12px;">Hotels</h5>
+<!-- Hotels Section -->
+<div class="card mb-5">
+    <h2>Hotels</h2>
     {% if hotels %}
-    {% for h in hotels %}
-    <div class="expense-card" style="border-left:3px solid var(--color-warning);margin-bottom:4px;">
-        <div class="expense-info">
-            <div class="expense-title">{{ h.hotel_name }}, {{ h.city }}</div>
-            <div class="expense-detail">{{ h.checkin_date }} → {{ h.checkout_date }}</div>
-        </div>
-        <div class="expense-amount">₹{{ '%.2f'|format(h.total_claimed_exc_gst or h.total_lb or 0) }}</div>
+    <div class="table-wrapper">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Hotel</th>
+                    <th>City</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in hotels %}
+                <tr class="table-row-animate">
+                    <td>{{ h.hotel_name }}</td>
+                    <td>{{ h.city }}</td>
+                    <td>{{ h.checkin_date }}</td>
+                    <td>{{ h.checkout_date }}</td>
+                    <td><strong>&#8377; {{ "%.2f"|format(h.total_claimed_exc_gst or h.total_lb or 0) }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    {% endfor %}
     {% else %}
-    <p style="color:var(--color-muted);margin:0;">No hotel records.</p>
+    <div class="empty-state empty-state-compact">
+        <div class="empty-state-icon">&#127976;</div>
+        <div class="empty-state-title">No hotel stays</div>
+        <div class="empty-state-text">No hotel entries for this month.</div>
+    </div>
     {% endif %}
 </div>
 
-<div class="card-audit mb-4">
-    <h5 style="margin-bottom:12px;">Local &amp; Other</h5>
-    {% if local or other %}
-    {% for l in local %}
-    <div class="expense-card" style="border-left:3px solid var(--color-success);margin-bottom:4px;">
-        <div class="expense-info">
-            <div class="expense-title">{{ l.from_place }} → {{ l.to_place }}</div>
-            <div class="expense-detail">{{ l.mode }} · {{ l.distance_km }} km</div>
-        </div>
-        <div class="expense-amount">₹{{ '%.2f'|format(l.claimed_amount_exc_gst or 0) }}</div>
+<!-- Local Conveyance Section -->
+<div class="card mb-5">
+    <h2>Local Conveyance</h2>
+    {% if local %}
+    <div class="table-wrapper">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Mode</th>
+                    <th>Distance</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in local %}
+                <tr class="table-row-animate">
+                    <td>{{ l.travel_date }}</td>
+                    <td>{{ l.from_place }}</td>
+                    <td>{{ l.to_place }}</td>
+                    <td><span class="badge badge-info badge-sm">{{ l.mode }}</span></td>
+                    <td>{{ l.distance_km }} km</td>
+                    <td><strong>&#8377; {{ "%.2f"|format(l.claimed_amount_exc_gst or 0) }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    {% endfor %}
-    {% for o in other %}
-    <div class="expense-card" style="border-left:3px solid var(--color-muted);margin-bottom:4px;">
-        <div class="expense-info">
-            <div class="expense-title">{{ o.expense_description }}</div>
-            <div class="expense-detail">{{ o.invoice_date or '' }}</div>
-        </div>
-        <div class="expense-amount">₹{{ '%.2f'|format(o.claimed_amount_exc_gst or 0) }}</div>
-    </div>
-    {% endfor %}
     {% else %}
-    <p style="color:var(--color-muted);margin:0;">No local or other records.</p>
+    <div class="empty-state empty-state-compact">
+        <div class="empty-state-icon">&#128652;</div>
+        <div class="empty-state-title">No local conveyance</div>
+        <div class="empty-state-text">No local conveyance entries for this month.</div>
+    </div>
     {% endif %}
+</div>
+
+<!-- Other Expenses Section -->
+<div class="card mb-5">
+    <h2>Other Expenses</h2>
+    {% if other %}
+    <div class="table-wrapper">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in other %}
+                <tr class="table-row-animate">
+                    <td>{{ o.invoice_date or '' }}</td>
+                    <td>{{ o.expense_description }}</td>
+                    <td><strong>&#8377; {{ "%.2f"|format(o.claimed_amount_exc_gst or 0) }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state empty-state-compact">
+        <div class="empty-state-icon">&#128200;</div>
+        <div class="empty-state-title">No other expenses</div>
+        <div class="empty-state-text">No other expense entries for this month.</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Grand Total Card -->
+<div class="card card-stat mb-5">
+    <div class="card-stat-label">Grand Total</div>
+    <div class="card-stat-value">&#8377; {{ "%.2f"|format(grand_total or 0) }}</div>
 </div>
 {% endblock %}

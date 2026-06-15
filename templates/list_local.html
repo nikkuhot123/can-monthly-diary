@@ -2,29 +2,42 @@
 {% block title %}Local - {{ diary.month }}/{{ diary.year }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Local · {{ diary.month }}/{{ diary.year }}</h2>
-    <a href="/local/add/{{ diary.id }}" class="pill-btn pill-gold">+ Add New</a>
-</div>
-{% if items %}
-{% for r in items %}
-<div class="card-audit expense-card">
-    <div class="expense-info">
-        <div class="expense-title">{{ r.from_place }} → {{ r.to_place }}</div>
-        <div class="expense-detail">{{ r.mode }} · {{ r.distance_km }} km</div>
+    <h1>Local Conveyance</h1>
+    <div class="page-header-actions">
+        <a href="/local/add/{{ diary.id }}" class="btn btn-primary">+ Add New</a>
     </div>
-    <div class="expense-amount">₹{{ '%.2f'|format(r.claimed_amount_exc_gst) }}</div>
-    <div class="expense-actions">
-        <a href="/local/edit/{{ r.id }}" class="pill-btn pill-warning" style="padding:2px 10px;">Edit</a>
+</div>
+
+{% if items %}
+<div style="display:flex; flex-direction:column; gap:12px;">
+{% for r in items %}
+<div class="card expense-card" style="animation: fade-in 0.3s ease forwards; animation-delay: {{ loop.index0 * 0.06 }}s; opacity: 0;">
+    <div class="expense-card-icon">🚕</div>
+    <div class="expense-card-body">
+        <div class="expense-card-title">{{ r.from_place }} → {{ r.to_place }}</div>
+        <div class="expense-card-detail">
+            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <span class="badge badge-info badge-sm">{{ r.mode }}</span>
+                <span>·</span>
+                <span>{{ r.distance_km }} km</span>
+            </span>
+        </div>
+    </div>
+    <div class="expense-card-amount">₹{{ '%.2f'|format(r.claimed_amount_exc_gst or 0) }}</div>
+    <div class="expense-card-actions">
+        <a href="/local/edit/{{ r.id }}" class="btn btn-ghost btn-sm">Edit</a>
         <form method="POST" action="/local/delete/{{ r.id }}" style="display:inline" onsubmit="return confirm('Delete this record?')">
-            <button type="submit" class="pill-btn pill-danger" style="padding:2px 10px;">Delete</button>
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
         </form>
     </div>
 </div>
 {% endfor %}
+</div>
 {% else %}
 <div class="empty-state">
-    <div class="empty-icon">🚕</div>
-    <div class="empty-text">No local conveyance records. Click "+ Add New" to add one.</div>
+    <div class="empty-state-icon">🚕</div>
+    <div class="empty-state-title">No local conveyance records</div>
+    <div class="empty-state-text">Click "+ Add New" to add a local conveyance record.</div>
 </div>
 {% endif %}
 {% endblock %}

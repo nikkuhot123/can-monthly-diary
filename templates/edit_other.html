@@ -2,38 +2,50 @@
 {% block title %}Edit Other Expense{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Edit Other Expense</h2>
-    <a href="/other/list/{{ item.diary_id }}" class="pill-btn pill-outline">← Back to Other</a>
+    <h1>Edit Other Expense</h1>
+    <div class="page-header-actions">
+        <a href="/other/list/{{ item.diary_id }}" class="btn btn-outline btn-sm">← Back to Other</a>
+    </div>
 </div>
-<div class="card-audit" style="max-width:700px;">
-    <form method="POST" action="/other/edit/{{ item.id }}" class="form-audit">
-        <div class="mb-3">
-            <label>Description</label>
-            <input type="text" name="expense_description" class="form-control" value="{{ item.expense_description }}" required>
+<div class="card" style="max-width:640px;">
+    <form method="POST" action="/other/edit/{{ item.id }}">
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <input type="text" name="expense_description" class="form-input" value="{{ item.expense_description }}" required>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label>Invoice Date</label>
-                <input type="date" name="invoice_date" class="form-control" value="{{ item.invoice_date or '' }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Invoice Date</label>
+                <input type="date" name="invoice_date" class="form-input" value="{{ item.invoice_date or '' }}">
             </div>
-            <div class="col-md-6 mb-3">
-                <label>Amount (₹ excl GST)</label>
-                <input type="number" step="0.01" name="claimed_amount_exc_gst" class="form-control" value="{{ item.claimed_amount_exc_gst or 0 }}" required>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label>GST Percent</label>
-                <input type="number" step="0.01" name="gst_percent" class="form-control" value="{{ item.gst_percent or 0 }}">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label>Declaration Amount (₹)</label>
-                <input type="number" step="0.01" name="declaration_amount" class="form-control" value="{{ item.declaration_amount or 0 }}">
+            <div class="form-group">
+                <label class="form-label">Amount (₹ excl GST)</label>
+                <input type="number" step="0.01" name="claimed_amount_exc_gst" class="form-input" value="{{ item.claimed_amount_exc_gst or 0 }}" required>
             </div>
         </div>
-        <div style="display:flex;gap:8px;">
-            <button type="submit" class="pill-btn pill-primary">Update</button>
-            <a href="/other/list/{{ item.diary_id }}" class="pill-btn pill-outline">Cancel</a>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">GST Percent</label>
+                <input type="number" step="0.01" name="gst_percent" class="form-input" value="{{ item.gst_percent or 0 }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Declaration Amount (₹)</label>
+                <input type="number" step="0.01" name="declaration_amount" class="form-input" value="{{ item.declaration_amount or 0 }}">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Vendor GSTIN</label>
+                <input type="text" name="vendor_gstin" class="form-input" value="{{ item.vendor_gstin or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Invoice Number</label>
+                <input type="text" name="invoice_number" class="form-input" value="{{ item.invoice_number or '' }}">
+            </div>
+        </div>
+        <div class="btn-group" style="margin-top:24px;">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a href="/other/list/{{ item.diary_id }}" class="btn btn-outline">Cancel</a>
         </div>
     </form>
 </div>

@@ -2,48 +2,50 @@
 {% block title %}Add Other Expense{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Add Other Expense</h2>
-    <a href="/other/list/{{ diary.id }}" class="pill-btn pill-outline">← Back to Other</a>
+    <h1>Add Other Expense</h1>
+    <div class="page-header-actions">
+        <a href="/other/list/{{ diary.id }}" class="btn btn-outline btn-sm">← Back to Other</a>
+    </div>
 </div>
-<div class="card-audit" style="max-width:700px;">
-    <form method="POST" action="/other/add/{{ diary.id }}" class="form-audit">
-        <div class="mb-3">
-            <label>Description</label>
-            <input type="text" name="expense_description" class="form-control" required>
+<div class="card" style="max-width:640px;">
+    <form method="POST" action="/other/add/{{ diary.id }}">
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <input type="text" name="expense_description" class="form-input" required>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label>Invoice Date</label>
-                <input type="date" name="invoice_date" class="form-control">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Invoice Date</label>
+                <input type="date" name="invoice_date" class="form-input">
             </div>
-            <div class="col-md-6 mb-3">
-                <label>Amount (₹ excl GST)</label>
-                <input type="number" step="0.01" name="claimed_amount_exc_gst" class="form-control" required>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label>GST Percent</label>
-                <input type="number" step="0.01" name="gst_percent" class="form-control" value="0">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label>Declaration Amount (₹)</label>
-                <input type="number" step="0.01" name="declaration_amount" class="form-control" value="0">
+            <div class="form-group">
+                <label class="form-label">Amount (₹ excl GST)</label>
+                <input type="number" step="0.01" name="claimed_amount_exc_gst" class="form-input" required>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label>Vendor GSTIN</label>
-                <input type="text" name="vendor_gstin" class="form-control">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">GST Percent</label>
+                <input type="number" step="0.01" name="gst_percent" class="form-input" value="0">
             </div>
-            <div class="col-md-6 mb-3">
-                <label>Invoice Number</label>
-                <input type="text" name="invoice_number" class="form-control">
+            <div class="form-group">
+                <label class="form-label">Declaration Amount (₹)</label>
+                <input type="number" step="0.01" name="declaration_amount" class="form-input" value="0">
             </div>
         </div>
-        <div style="display:flex;gap:8px;">
-            <button type="submit" class="pill-btn pill-primary">Save</button>
-            <a href="/other/list/{{ diary.id }}" class="pill-btn pill-outline">Cancel</a>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Vendor GSTIN</label>
+                <input type="text" name="vendor_gstin" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Invoice Number</label>
+                <input type="text" name="invoice_number" class="form-input">
+            </div>
+        </div>
+        <div class="btn-group" style="margin-top:24px;">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="/other/list/{{ diary.id }}" class="btn btn-outline">Cancel</a>
         </div>
     </form>
 </div>

@@ -2,42 +2,44 @@
 {% block title %}Linked Accounts - Admin{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Linked Google Accounts</h2>
+    <h1>Linked Google Accounts</h1>
 </div>
-<div class="card-audit">
-    {% if links %}
-    <div class="table-responsive">
-        <table class="table table-audit">
-            <thead>
-                <tr>
-                    <th>Email</th>
-                    <th>Staff No</th>
-                    <th>Mobile</th>
-                    <th>Admin</th>
-                    <th>Linked Since</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for link in links %}
-                <tr>
-                    <td>{{ link.linked_email }}</td>
-                    <td>{{ link.staff_no }}</td>
-                    <td>{{ link.mobile }}</td>
-                    <td><span class="status-badge {{ 'badge-draft' if link.is_admin else 'badge-submitted' }}">{{ 'Yes' if link.is_admin else 'No' }}</span></td>
-                    <td>{{ link.created_at.strftime('%d-%b-%Y') if link.created_at else 'N/A' }}</td>
-                    <td>
-                        <form method="POST" action="/admin/unlink/{{ link.google_uid }}" style="display:inline" onsubmit="return confirm('Unlink this Google account? The user will need to re-link.')">
-                            <button type="submit" class="pill-btn pill-danger" style="padding:2px 10px;">Unlink</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state"><div class="empty-icon">🔗</div><div class="empty-text">No linked accounts.</div></div>
-    {% endif %}
+
+{% if links %}
+<div class="table-wrapper">
+    <table class="table-modern">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Staff No</th>
+                <th>Mobile</th>
+                <th>Admin</th>
+                <th>Linked Since</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for link in links %}
+            <tr>
+                <td>{{ link.linked_email }}</td>
+                <td>{{ link.staff_no }}</td>
+                <td>{{ link.mobile }}</td>
+                <td><span class="badge {{ 'badge-admin' if link.is_admin else 'badge-draft' }}">{{ 'Yes' if link.is_admin else 'No' }}</span></td>
+                <td>{{ link.created_at.strftime('%d-%b-%Y') if link.created_at else 'N/A' }}</td>
+                <td>
+                    <form method="POST" action="/admin/unlink/{{ link.google_uid }}" style="display:inline" onsubmit="return confirm('Unlink this Google account? The user will need to re-link.')">
+                        <button type="submit" class="btn btn-danger btn-sm">Unlink</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">&#128279;</div>
+    <div class="empty-state-text">No linked accounts.</div>
+</div>
+{% endif %}
 {% endblock %}

@@ -2,68 +2,69 @@
 {% block title %}Users - Admin{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Users</h2>
-    <span style="color:var(--color-muted);font-size:0.85rem;">{{ users|length }} staff members</span>
+    <h1>Users</h1>
+    <span class="text-small text-secondary">{{ users|length }} staff members</span>
 </div>
 
-<div class="card-audit mb-3" style="padding:12px 16px;">
-    <input type="text" id="user-search" class="form-control" placeholder="Search by staff no, name, designation…" style="max-width:360px;">
+<div class="card card-compact mb-4">
+    <input type="text" id="user-search" class="form-input" placeholder="Search by staff no, name, designation…" style="max-width:360px;">
 </div>
 
-<div class="card-audit">
-    {% if users %}
-    <div class="table-responsive">
-        <table class="table table-audit" id="user-table">
-            <thead>
-                <tr>
-                    <th>Staff No</th>
-                    <th>Name</th>
-                    <th>Designation</th>
-                    <th>Mobile</th>
-                    <th>Diaries</th>
-                    <th>Admin</th>
-                    <th>Active</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for u in users %}
-                <tr data-search="{{ u.staff_no }} {{ u.name }} {{ u.designation or '' }}">
-                    <td><strong>{{ u.staff_no }}</strong></td>
-                    <td>{{ u.name }}</td>
-                    <td>{{ u.designation or 'N/A' }}</td>
-                    <td>{{ u.mobile or 'N/A' }}</td>
-                    <td>
-                        {% if u.diary_count > 0 %}
-                        <a href="/admin/diaries?staff={{ u.staff_no }}" style="color:var(--color-gold);">{{ u.diary_count }}</a>
-                        {% else %}
-                        0
-                        {% endif %}
-                    </td>
-                    <td><span class="status-badge {{ 'badge-draft' if u.is_admin else 'badge-submitted' }}">{{ 'Yes' if u.is_admin else 'No' }}</span></td>
-                    <td><span class="status-badge {{ 'badge-submitted' if u.is_active else 'badge-draft' }}">{{ 'Active' if u.is_active else 'Inactive' }}</span></td>
-                    <td style="white-space:nowrap;">
-                        <a href="/admin/users/{{ u.id }}/edit" class="pill-btn pill-outline" style="padding:2px 10px;">Edit</a>
-                        {% if is_super_admin and u.staff_no != '861198' %}
-                        <form method="POST" action="/admin/toggle-admin/{{ u.id }}" style="display:inline">
-                            <button type="submit" class="pill-btn {{ 'pill-warning' if u.is_admin else 'pill-outline' }}" style="padding:2px 10px;">{{ 'Demote' if u.is_admin else 'Make Admin' }}</button>
-                        </form>
-                        {% endif %}
-                        {% if u.staff_no != '861198' %}
-                        <form method="POST" action="/admin/toggle-active/{{ u.id }}" style="display:inline">
-                            <button type="submit" class="pill-btn {{ 'pill-danger' if u.is_active else 'pill-success' }}" style="padding:2px 10px;">{{ 'Deactivate' if u.is_active else 'Activate' }}</button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No users found.</div></div>
-    {% endif %}
+{% if users %}
+<div class="table-wrapper">
+    <table class="table-modern" id="user-table">
+        <thead>
+            <tr>
+                <th>Staff No</th>
+                <th>Name</th>
+                <th>Designation</th>
+                <th>Mobile</th>
+                <th>Diaries</th>
+                <th>Admin</th>
+                <th>Active</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr data-search="{{ u.staff_no }} {{ u.name }} {{ u.designation or '' }}">
+                <td><strong>{{ u.staff_no }}</strong></td>
+                <td>{{ u.name }}</td>
+                <td>{{ u.designation or 'N/A' }}</td>
+                <td>{{ u.mobile or 'N/A' }}</td>
+                <td>
+                    {% if u.diary_count > 0 %}
+                    <a href="/admin/diaries?staff={{ u.staff_no }}" class="text-accent">{{ u.diary_count }}</a>
+                    {% else %}
+                    0
+                    {% endif %}
+                </td>
+                <td><span class="badge {{ 'badge-admin' if u.is_admin else 'badge-draft' }}">{{ 'Yes' if u.is_admin else 'No' }}</span></td>
+                <td><span class="badge {{ 'badge-submitted' if u.is_active else 'badge-draft' }}">{{ 'Active' if u.is_active else 'Inactive' }}</span></td>
+                <td style="white-space:nowrap;">
+                    <a href="/admin/users/{{ u.id }}/edit" class="btn btn-outline btn-sm">Edit</a>
+                    {% if is_super_admin and u.staff_no != '861198' %}
+                    <form method="POST" action="/admin/toggle-admin/{{ u.id }}" style="display:inline">
+                        <button type="submit" class="btn btn-sm {{ 'btn-ghost' if u.is_admin else 'btn-outline' }}" style="border-color:var(--accent-500);color:var(--accent-500);">{{ 'Demote' if u.is_admin else 'Make Admin' }}</button>
+                    </form>
+                    {% endif %}
+                    {% if u.staff_no != '861198' %}
+                    <form method="POST" action="/admin/toggle-active/{{ u.id }}" style="display:inline">
+                        <button type="submit" class="btn btn-sm {{ 'btn-danger' if u.is_active else 'btn-outline' }}" style="{{ 'color:var(--danger-500);' if not u.is_active else '' }}">{{ 'Deactivate' if u.is_active else 'Activate' }}</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">&#128101;</div>
+    <div class="empty-state-text">No users found.</div>
+</div>
+{% endif %}
 
 <script>
 document.getElementById('user-search').addEventListener('input', function() {

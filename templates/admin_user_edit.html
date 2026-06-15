@@ -2,72 +2,76 @@
 {% block title %}Edit User - Admin{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Edit User — {{ target.name }}</h2>
-    <a href="/admin/users" class="pill-btn pill-outline">← Back to Users</a>
+    <h1>Edit User — {{ target.name }}</h1>
+    <div class="page-header-actions">
+        <a href="/admin/users" class="btn btn-outline">← Back to Users</a>
+    </div>
 </div>
 
 {% if error %}
-<div class="alert alert-danger alert-dismissible fade show">{{ error }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="flash flash-error">
+    <span>{{ error }}</span>
+    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
 </div>
 {% endif %}
 {% if success %}
-<div class="alert alert-success alert-dismissible fade show">{{ success }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="flash flash-success">
+    <span>{{ success }}</span>
+    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
 </div>
 {% endif %}
 
-<form method="POST" action="/admin/users/{{ target.id }}/edit" style="max-width:900px;">
-    <div class="card-audit mb-4">
-        <h5 class="mb-3" style="color:var(--color-gold);">Identity</h5>
-        <div class="row">
-            <div class="col-md-4 mb-3">
+<form method="POST" action="/admin/users/{{ target.id }}/edit">
+    <div class="card mb-4">
+        <h3 class="text-accent mb-4">Identity</h3>
+        <div class="form-row">
+            <div class="form-group">
                 <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                <input type="text" name="name" class="form-control" value="{{ target.name }}" required>
+                <input type="text" name="name" class="form-input" value="{{ target.name }}" required>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="form-group">
                 <label class="form-label">Staff No <span class="text-danger">*</span></label>
-                <input type="text" name="staff_no" class="form-control" value="{{ target.staff_no }}" required>
+                <input type="text" name="staff_no" class="form-input" value="{{ target.staff_no }}" required>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="form-group">
                 <label class="form-label">Mobile</label>
-                <input type="tel" name="mobile" class="form-control" value="{{ target.mobile or '' }}" placeholder="10-digit">
+                <input type="tel" name="mobile" class="form-input" value="{{ target.mobile or '' }}" placeholder="10-digit">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="form-group">
                 <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-control" value="{{ target.email or '' }}">
+                <input type="email" name="email" class="form-input" value="{{ target.email or '' }}">
             </div>
         </div>
     </div>
 
-    <div class="card-audit mb-4">
-        <h5 class="mb-3" style="color:var(--color-gold);">Service Details</h5>
-        <div class="row">
-            <div class="col-md-4 mb-3">
+    <div class="card mb-4">
+        <h3 class="text-accent mb-4">Service Details</h3>
+        <div class="form-row">
+            <div class="form-group">
                 <label class="form-label">Designation</label>
-                <input type="text" name="designation" class="form-control" value="{{ target.designation or '' }}">
+                <input type="text" name="designation" class="form-input" value="{{ target.designation or '' }}">
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="form-group">
                 <label class="form-label">Designation Code</label>
-                <input type="text" name="designation_code" class="form-control" value="{{ target.designation_code or '' }}">
+                <input type="text" name="designation_code" class="form-input" value="{{ target.designation_code or '' }}">
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="form-group">
                 <label class="form-label">DP Code</label>
-                <input type="text" name="dp_code" class="form-control" value="{{ target.dp_code or '' }}">
+                <input type="text" name="dp_code" class="form-input" value="{{ target.dp_code or '' }}">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="form-group">
                 <label class="form-label">Section</label>
-                <input type="text" name="section" class="form-control" value="{{ target.section or '' }}">
+                <input type="text" name="section" class="form-input" value="{{ target.section or '' }}">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="form-group">
                 <label class="form-label">Zone</label>
-                <input type="text" name="zone" class="form-control" value="{{ target.zone or '' }}">
+                <input type="text" name="zone" class="form-input" value="{{ target.zone or '' }}">
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="form-group">
                 <label class="form-label">Basic Pay (₹)</label>
-                <input type="number" step="0.01" name="basic_pay" class="form-control" value="{{ target.basic_pay or '' }}">
+                <input type="number" step="0.01" name="basic_pay" class="form-input" value="{{ target.basic_pay or '' }}">
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="form-group">
                 <label class="form-label">Home State</label>
                 <select name="home_state" class="form-select">
                     {% for s in all_states %}
@@ -75,7 +79,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="form-group">
                 <label class="form-label">City Category</label>
                 <select name="city_category" class="form-select">
                     {% for cat in ['X', 'Y', 'Z', 'A1', 'B1', 'B2', 'C', 'R'] %}
@@ -86,50 +90,50 @@
         </div>
     </div>
 
-    <div class="card-audit mb-4">
-        <h5 class="mb-3" style="color:var(--color-gold);">Personal / Bank Details</h5>
-        <div class="row">
-            <div class="col-md-6 mb-3">
+    <div class="card mb-4">
+        <h3 class="text-accent mb-4">Personal / Bank Details</h3>
+        <div class="form-row">
+            <div class="form-group">
                 <label class="form-label">Address Line 1</label>
-                <input type="text" name="address_line1" class="form-control" value="{{ target.address_line1 or '' }}">
+                <input type="text" name="address_line1" class="form-input" value="{{ target.address_line1 or '' }}">
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="form-group">
                 <label class="form-label">Address Line 2</label>
-                <input type="text" name="address_line2" class="form-control" value="{{ target.address_line2 or '' }}">
+                <input type="text" name="address_line2" class="form-input" value="{{ target.address_line2 or '' }}">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="form-group">
                 <label class="form-label">City / PIN</label>
-                <input type="text" name="city_pin" class="form-control" value="{{ target.city_pin or '' }}">
+                <input type="text" name="city_pin" class="form-input" value="{{ target.city_pin or '' }}">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="form-group">
                 <label class="form-label">Bank Name</label>
-                <input type="text" name="bank_name" class="form-control" value="{{ target.bank_name or '' }}">
+                <input type="text" name="bank_name" class="form-input" value="{{ target.bank_name or '' }}">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="form-group">
                 <label class="form-label">Bank Account No.</label>
-                <input type="text" name="bank_account_no" class="form-control" value="{{ target.bank_account_no or '' }}">
+                <input type="text" name="bank_account_no" class="form-input" value="{{ target.bank_account_no or '' }}">
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="form-group">
                 <label class="form-label">TA ID</label>
-                <input type="text" name="ta_id" class="form-control" value="{{ target.ta_id or '' }}">
+                <input type="text" name="ta_id" class="form-input" value="{{ target.ta_id or '' }}">
             </div>
         </div>
     </div>
 
-    <div class="d-flex gap-2">
-        <button type="submit" class="pill-btn pill-gold">Save Changes</button>
-        <a href="/admin/users" class="pill-btn pill-outline">Cancel</a>
+    <div class="btn-group mb-4">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="/admin/users" class="btn btn-outline">Cancel</a>
     </div>
 </form>
 
 {% if is_super_admin and target.is_admin and target.staff_no != '861198' %}
-<div class="card-audit mt-4" style="max-width:900px;border:1px solid var(--color-gold);">
-    <h5 class="mb-1" style="color:var(--color-gold);">Admin Permissions for {{ target.name }}</h5>
-    <p style="font-size:0.8rem;color:var(--color-muted);margin-bottom:16px;">
+<div class="card card-compact border-accent mt-4">
+    <h3 class="text-accent mb-1">Admin Permissions for {{ target.name }}</h3>
+    <p class="text-small text-secondary mb-4">
         Control which admin sections this user can access.
     </p>
     <form method="POST" action="/admin/users/{{ target.id }}/permissions">
-        <div class="d-flex flex-wrap gap-3 mb-3">
+        <div class="flex flex-wrap gap-3 mb-3">
             {% set perm_labels = {
                 'users': 'Manage Users',
                 'holidays': 'Manage Holidays',
@@ -138,14 +142,17 @@
                 'whatsapp': 'WhatsApp Import / Compute Leaves',
             } %}
             {% for perm in all_permissions %}
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="permissions" value="{{ perm }}"
-                       id="perm_{{ perm }}" {{ 'checked' if perm in target_perms }}>
-                <label class="form-check-label" for="perm_{{ perm }}">{{ perm_labels[perm] }}</label>
+            <div class="toggle-wrapper">
+                <label class="toggle-switch">
+                    <input type="checkbox" name="permissions" value="{{ perm }}"
+                           id="perm_{{ perm }}" {{ 'checked' if perm in target_perms }}>
+                    <span class="toggle-slider"></span>
+                </label>
+                <label class="toggle-label" for="perm_{{ perm }}">{{ perm_labels[perm] }}</label>
             </div>
             {% endfor %}
         </div>
-        <button type="submit" class="pill-btn pill-warning">Update Permissions</button>
+        <button type="submit" class="btn btn-ghost" style="border-color:var(--accent-500);color:var(--accent-500);">Update Permissions</button>
     </form>
 </div>
 {% endif %}

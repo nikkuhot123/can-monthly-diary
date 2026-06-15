@@ -2,24 +2,26 @@
 {% block title %}Edit Travel{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Edit Travel</h2>
-    <a href="/travel/list/{{ leg.diary_id }}" class="pill-btn pill-outline">← Back to Travel</a>
+    <h1>Edit Travel</h1>
+    <div class="page-header-actions">
+        <a href="/travel/list/{{ leg.diary_id }}" class="btn btn-outline btn-sm">← Back to Travel</a>
+    </div>
 </div>
-<div class="card-audit" style="max-width:700px;">
-    <form method="POST" action="/travel/edit/{{ leg.id }}" class="form-audit">
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label>From Place</label>
-                <input type="text" name="from_place" class="form-control" value="{{ leg.from_place }}" required>
+<div class="card" style="max-width:720px;">
+    <form method="POST" action="/travel/edit/{{ leg.id }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">From Place</label>
+                <input type="text" name="from_place" class="form-input" value="{{ leg.from_place }}" required>
             </div>
-            <div class="col-md-6 mb-3">
-                <label>To Place</label>
-                <input type="text" name="to_place" class="form-control" value="{{ leg.to_place }}" required>
+            <div class="form-group">
+                <label class="form-label">To Place</label>
+                <input type="text" name="to_place" class="form-input" value="{{ leg.to_place }}" required>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label>Mode</label>
+        <div class="form-row-3">
+            <div class="form-group">
+                <label class="form-label">Mode</label>
                 <select name="mode" class="form-select">
                     <option value="Bus" {% if leg.mode == 'Bus' %}selected{% endif %}>Bus</option>
                     <option value="Train" {% if leg.mode == 'Train' %}selected{% endif %}>Train</option>
@@ -28,50 +30,52 @@
                     <option value="Own Vehicle" {% if leg.mode == 'Own Vehicle' %}selected{% endif %}>Own Vehicle</option>
                 </select>
             </div>
-            <div class="col-md-4 mb-3">
-                <label>Start Date</label>
-                <input type="date" name="date_start" class="form-control" value="{{ leg.date_start }}" required>
+            <div class="form-group">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="date_start" class="form-input" value="{{ leg.date_start }}" required>
             </div>
-            <div class="col-md-4 mb-3">
-                <label>Amount (₹)</label>
-                <input type="number" step="0.01" name="claimed_amount_exc_gst" class="form-control" value="{{ leg.claimed_amount_exc_gst or 0 }}" required>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label>Travel Class</label>
-                <input type="text" name="travel_class" class="form-control" value="{{ leg.travel_class or '' }}">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label>GST Percent</label>
-                <input type="number" step="0.01" name="gst_percent" class="form-control" value="{{ leg.gst_percent or 0 }}">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label>Vendor GSTIN</label>
-                <input type="text" name="vendor_gstin" class="form-control" value="{{ leg.vendor_gstin or '' }}">
+            <div class="form-group">
+                <label class="form-label">Amount (₹)</label>
+                <input type="number" step="0.01" name="claimed_amount_exc_gst" class="form-input" value="{{ leg.claimed_amount_exc_gst or 0 }}" required>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label>Distance (km)</label>
-                <input type="number" step="0.1" name="distance_km" class="form-control" value="{{ leg.distance_km or 0 }}">
+        <div class="form-row-3">
+            <div class="form-group">
+                <label class="form-label">Travel Class</label>
+                <input type="text" name="travel_class" class="form-input" value="{{ leg.travel_class or '' }}">
             </div>
-            <div class="col-md-4 mb-3">
-                <label>Ticket No</label>
-                <input type="text" name="ticket_no" class="form-control" value="{{ leg.ticket_no or '' }}">
+            <div class="form-group">
+                <label class="form-label">GST Percent</label>
+                <input type="number" step="0.01" name="gst_percent" class="form-input" value="{{ leg.gst_percent or 0 }}">
             </div>
-            <div class="col-md-4 mb-3">
-                <label class="d-block">&nbsp;</label>
-                <label class="toggle-switch" style="margin-top:8px;">
-                    <input type="checkbox" name="no_bill" value="true" {% if leg.no_bill %}checked{% endif %}>
-                    <span class="toggle-slider"></span>
-                    <span style="margin-left:8px;font-size:0.8rem;">No Bill</span>
-                </label>
+            <div class="form-group">
+                <label class="form-label">Vendor GSTIN</label>
+                <input type="text" name="vendor_gstin" class="form-input" value="{{ leg.vendor_gstin or '' }}">
             </div>
         </div>
-        <div style="display:flex;gap:8px;">
-            <button type="submit" class="pill-btn pill-primary">Update</button>
-            <a href="/travel/list/{{ leg.diary_id }}" class="pill-btn pill-outline">Cancel</a>
+        <div class="form-row-4">
+            <div class="form-group">
+                <label class="form-label">Distance (km)</label>
+                <input type="number" step="0.1" name="distance_km" class="form-input" value="{{ leg.distance_km or 0 }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Ticket No</label>
+                <input type="text" name="ticket_no" class="form-input" value="{{ leg.ticket_no or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">&nbsp;</label>
+                <div class="toggle-wrapper">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="no_bill" value="true" {% if leg.no_bill %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">No Bill</span>
+                </div>
+            </div>
+        </div>
+        <div class="btn-group" style="margin-top:24px;">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a href="/travel/list/{{ leg.diary_id }}" class="btn btn-outline">Cancel</a>
         </div>
     </form>
 </div>
