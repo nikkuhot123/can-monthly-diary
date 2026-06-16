@@ -21,3 +21,4 @@ itsdangerous==2.2.0
 # Configure OCR_TESSERACT_CMD in .env if tesseract.exe is not on PATH.
 
 firebase-admin>=6.0.0
+beautifulsoup4==4.12.3
