@@ -12,7 +12,13 @@
 <div style="display:flex; flex-direction:column; gap:12px;">
 {% for r in legs %}
 <div class="card expense-card" style="animation: fade-in 0.3s ease forwards; animation-delay: {{ loop.index0 * 0.06 }}s; opacity: 0;">
-    <div class="expense-card-icon">🚗</div>
+    <div class="expense-card-icon">
+        {% if r.mode == 'Airline' %}✈️
+        {% elif r.mode == 'Train' %}🚂
+        {% elif r.mode == 'Bus' %}🚌
+        {% elif r.mode == 'Taxi' %}🚕
+        {% else %}🚗{% endif %}
+    </div>
     <div class="expense-card-body">
         <div class="expense-card-title">{{ r.from_place }} → {{ r.to_place }}</div>
         <div class="expense-card-detail">

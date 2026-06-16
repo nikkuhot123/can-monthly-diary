@@ -59,12 +59,13 @@
         </div>
         <div class="form-group">
             <label class="form-label">Upload Bill File</label>
-            <div class="dropzone" id="billDropzone" onclick="document.getElementById('fileInput').click()">
+            <div class="dropzone" id="billDropzone">
                 <div class="dropzone-icon">&#128196;</div>
                 <div class="dropzone-text">Drop a bill file here or <strong>click to browse</strong></div>
                 <div class="dropzone-filename" id="dropzoneFilename"></div>
+                <input type="file" name="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png"
+                       style="position:absolute;inset:0;opacity:0;cursor:pointer;">
             </div>
-            <input type="file" name="file" id="fileInput" class="form-input" style="display:none;" accept=".pdf,.jpg,.jpeg,.png" onchange="document.getElementById('dropzoneFilename').textContent = this.files[0]?.name || ''">
         </div>
         <div class="btn-group" style="margin-top:24px;">
             <button type="submit" class="btn btn-primary">Save</button>
@@ -72,4 +73,49 @@
         </div>
     </form>
 </div>
+
+<script>
+(function() {
+    const dropZone = document.getElementById('billDropzone');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('dropzoneFilename');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function() {
+            dropZone.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function() {
+            dropZone.classList.remove('drag-over');
+        });
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            fileInput.files = files;
+            updateFileState();
+        }
+    });
+
+    fileInput.addEventListener('change', updateFileState);
+
+    function updateFileState() {
+        if (fileInput.files.length > 0) {
+            fileName.textContent = fileInput.files[0].name;
+        } else {
+            fileName.textContent = '';
+        }
+    }
+})();
+</script>
 {% endblock %}

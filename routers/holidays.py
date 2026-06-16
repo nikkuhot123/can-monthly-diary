@@ -83,6 +83,10 @@ def refresh_holidays(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/auth/login")
 
+    referer = request.headers.get("referer", "")
+    is_admin_flow = "/admin/" in referer
+    redirect_target = "/admin/holidays" if is_admin_flow else "/holidays/"
+
     try:
         import httpx
         from bs4 import BeautifulSoup
@@ -118,19 +122,11 @@ def refresh_holidays(request: Request, db: Session = Depends(get_db)):
                             ))
                             added += 1
         db.commit()
-        return templates.TemplateResponse("holidays.html", {
-            "request": request, "user": user, "success": f"Added {added} new holidays",
-            "states": [r[0] for r in db.query(Holiday.state).distinct().all()],
-            "holidays": db.query(Holiday).order_by(Holiday.holiday_date.desc()).limit(20).all(),
-            "state_filter": "", "year_filter": "",
-        })
+        from urllib.parse import quote_plus
+        return RedirectResponse(url=f"{redirect_target}?success={quote_plus(f'Added {added} new holidays')}", status_code=303)
     except Exception as e:
-        return templates.TemplateResponse("holidays.html", {
-            "request": request, "user": user, "error": f"Refresh failed: {str(e)}",
-            "states": [r[0] for r in db.query(Holiday.state).distinct().all()],
-            "holidays": db.query(Holiday).order_by(Holiday.holiday_date.desc()).limit(20).all(),
-            "state_filter": "", "year_filter": "",
-        })
+        from urllib.parse import quote_plus
+        return RedirectResponse(url=f"{redirect_target}?error={quote_plus(f'Refresh failed: {str(e)}')}", status_code=303)
 
 
 @router.post("/delete/{holiday_id}")

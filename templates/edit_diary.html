@@ -8,6 +8,8 @@
 
 <div class="card" style="max-width:500px;">
     <form method="POST">
+        <input type="hidden" name="month" value="{{ diary.month }}">
+        <input type="hidden" name="year" value="{{ diary.year }}">
         <div class="form-group">
             <label class="form-label">Bank State</label>
             <select name="bank_state" class="form-select">

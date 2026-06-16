@@ -89,21 +89,25 @@
 
             <!-- Flash Messages -->
             <div class="flash-messages">
-                {% if error %}
+                {% set display_error = error or request.query_params.get('error') %}
+                {% set display_success = success or request.query_params.get('success') %}
+                {% set display_info = info or request.query_params.get('info') %}
+                
+                {% if display_error %}
                 <div class="flash flash-error">
-                    <span>{{ error }}</span>
+                    <span>{{ display_error }}</span>
                     <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
                 </div>
                 {% endif %}
-                {% if success %}
+                {% if display_success %}
                 <div class="flash flash-success">
-                    <span>{{ success }}</span>
+                    <span>{{ display_success }}</span>
                     <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
                 </div>
                 {% endif %}
-                {% if info %}
+                {% if display_info %}
                 <div class="flash flash-info">
-                    <span>{{ info }}</span>
+                    <span>{{ display_info }}</span>
                     <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
                 </div>
                 {% endif %}
