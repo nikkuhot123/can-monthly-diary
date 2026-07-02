@@ -17,4 +17,4 @@ do {
 } while ($stopped)
 
 Write-Host "Starting Audit Diary System on http://127.0.0.1:9931"
-python main.py
+.\venv\Scripts\python main.py

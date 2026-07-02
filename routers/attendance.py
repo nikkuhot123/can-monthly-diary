@@ -326,7 +326,8 @@ def add_attendance_page(request: Request, diary_id: int, db: Session = Depends(g
         raise HTTPException(status_code=404)
     return templates.TemplateResponse("add_attendance.html", {
         "request": request, "user": user, "diary": diary,
-        "error": request.query_params.get("error")
+        "error": request.query_params.get("error"),
+        "prefill_date": request.query_params.get("date", ""),
     })
 
 

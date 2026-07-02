@@ -111,6 +111,13 @@ def _configure_a4_print(ws):
     else:
         ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.print_options.horizontalCentered = True
+    # Hide the worksheet gridlines: every table already carries its own borders,
+    # so gridlines only add visual noise on screen and in print.
+    ws.sheet_view.showGridLines = False
+    ws.print_options.gridLines = False
+    # Ensure a page-number footer even if a future template drops it.
+    if not (ws.oddFooter.center.text or "").strip():
+        ws.oddFooter.center.text = "Page &P of &N"
 
 
 def _build_duty_groups(attendance, diary):
@@ -150,12 +157,51 @@ def _build_duty_groups(attendance, diary):
     return groups
 
 
+# Static column/section headers for Sheet1's "Timings of Duty" (data rows 50-63)
+# and "No. of Mandays Worked" (data rows 68-80) blocks. The template ships these
+# rows pre-styled (fill/borders/bold) but with no label text, so the printed form
+# shows two unlabelled tables. We fill the merged-cell anchors here so every
+# generated report is self-describing.
+_SHEET1_SECTION_HEADERS = {
+    # 2. Timings of duty attended
+    "A46": "2. TIMINGS OF DUTY ATTENDED:",
+    "A47": "SL. No.",
+    "B47": "Place / Branch",
+    "H47": "DP Code",
+    "J47": "Timings of Duty",
+    "J48": "Forenoon",
+    "O48": "Afternoon",
+    "J49": "From",
+    "L49": "To",
+    "O49": "From",
+    "R49": "To",
+    "U47": "Remarks",
+    # 3. No. of mandays worked
+    "A65": "3. NO. OF MANDAYS WORKED:",
+    "A66": "SL. No.",
+    "B66": "Place / Branch",
+    "H66": "DP Code",
+    "J66": "Date",
+    "J67": "From",
+    "M67": "To",
+    "P66": "No. of Mandays",
+    "T66": "Remarks (Dates)",
+}
+
+
+def _write_sheet1_section_headers(ws):
+    for cell_ref, label in _SHEET1_SECTION_HEADERS.items():
+        _set_cell_value(ws, cell_ref, value=label)
+
+
 def _write_sheet1(ws, user, diary, attendance):
     user_dp = user.dp_code or ""
     today = date.today()
     month_label = f"{py_cal.month_abbr[diary.month].upper()}-{diary.year}"
     camp = _safe_upper(user.section, "NASHIK")
     name = _safe_upper(user.name)
+
+    _write_sheet1_section_headers(ws)
 
     _set_cell_value(ws, "C7", value=name)
     _set_cell_value(ws, "C8", value=user.staff_no)

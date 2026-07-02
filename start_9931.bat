@@ -26,7 +26,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "  } " ^
     "} while ($stillBusy)"
 
-python main.py
+venv\Scripts\python main.py
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo Failed to launch the application.

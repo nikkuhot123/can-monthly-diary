@@ -6,8 +6,7 @@ from typing import Optional
 
 import pdfplumber
 import pytesseract
-from PIL import Image
-
+from PIL import Image, ImageEnhance, ImageFilter
 from config import settings
 
 if settings.OCR_TESSERACT_CMD:
@@ -29,7 +28,8 @@ DATE_RE = re.compile(
 class ParsedHotelBill:
     raw_text: str = ""
     warnings: list[str] = field(default_factory=list)
-    hotel_name: str = ""
+    category: str = "other"  # 'hotel', 'travel', 'local', 'other'
+    hotel_name: str = ""     # General vendor name
     city: str = ""
     invoice_date: Optional[date] = None
     invoice_number: str = ""
@@ -42,6 +42,74 @@ class ParsedHotelBill:
     total_amount: float = 0.0
     gst_percent: float = 0.0
 
+ParsedBill = ParsedHotelBill
+
+
+def preprocess_image_for_ocr(image: Image.Image) -> Image.Image:
+    try:
+        # Convert to grayscale
+        img = image.convert("L")
+        
+        # Resize to double size if image is relatively small (helps resolve small/dense fonts)
+        w, h = img.size
+        if w < 1200 or h < 1200:
+            img = img.resize((w * 2, h * 2), Image.Resampling.LANCZOS)
+            
+        # Enhance Contrast (factor 2.0 makes dark parts darker and light parts lighter)
+        img = ImageEnhance.Contrast(img).enhance(2.0)
+        
+        # Sharpen the image slightly
+        img = img.filter(ImageFilter.SHARPEN)
+        
+        return img
+    except Exception:
+        # Fallback to original image if preprocessing fails
+        return image
+
+
+def _ocr_image(image: Image.Image, warnings: list[str]) -> str:
+    try:
+        # Try mixed English and Hindi OCR
+        return pytesseract.image_to_string(image, lang="eng+hin")
+    except Exception:
+        # Fallback to English only OCR
+        warnings.append(
+            "Note: Hindi language pack ('hin') not installed/configured in Tesseract. Falling back to English OCR."
+        )
+        try:
+            return pytesseract.image_to_string(image, lang="eng")
+        except Exception as fallback_exc:
+            raise fallback_exc
+
+
+def classify_bill_category(text: str) -> str:
+    text_lower = text.lower()
+    
+    # 1. Hotel / Lodging Keywords (English & Hindi)
+    hotel_keywords = [
+        "hotel", "stay", "room", "accommodation", "lodging", "tariff", "guest house", "resort", "residency", "inn", "lodge", "rooms",
+        "होटल", "लॉज", "कमरा", "किराया", "आवास", "गेस्ट हाउस"
+    ]
+    if any(k in text_lower for k in hotel_keywords):
+        return "hotel"
+        
+    # 2. Travel / Tickets (Inter-city) Keywords
+    travel_keywords = [
+        "ticket", "pnr", "irctc", "railway", "boarding pass", "indigo", "airways", "flight", "indian railways", "passenger", "bus ticket", "toll",
+        "टिकट", "रेलवे", "बस", "यात्रा", "उड़ान", "टोल", "सफर", "यात्री"
+    ]
+    if any(k in text_lower for k in travel_keywords):
+        return "travel"
+        
+    # 3. Local Conveyance Keywords
+    local_keywords = [
+        "ola", "uber", "taxi", "metro", "auto rickshaw", "cab", "conveyance", "local travel", "rickshaw",
+        "ऑटो", "कैब", "टैक्सी", "मेट्रो", "रिक्शा"
+    ]
+    if any(k in text_lower for k in local_keywords):
+        return "local"
+        
+    return "other"
 
 def extract_bill_text(file_path: str, file_type: str) -> tuple[str, list[str]]:
     ext = file_type.lower().lstrip(".")
@@ -65,7 +133,8 @@ def extract_bill_text(file_path: str, file_type: str) -> tuple[str, list[str]]:
                 # Fall back to OCR for this page
                 try:
                     image = page.to_image(resolution=180).original
-                    ocr_text = pytesseract.image_to_string(image)
+                    processed_img = preprocess_image_for_ocr(image)
+                    ocr_text = _ocr_image(processed_img, warnings)
                     if ocr_text and ocr_text.strip():
                         text_parts.append(ocr_text.strip())
                     else:
@@ -80,7 +149,9 @@ def extract_bill_text(file_path: str, file_type: str) -> tuple[str, list[str]]:
 
     if ext in {"jpg", "jpeg", "png"}:
         try:
-            return pytesseract.image_to_string(Image.open(path)), warnings
+            img = Image.open(path)
+            processed_img = preprocess_image_for_ocr(img)
+            return _ocr_image(processed_img, warnings), warnings
         except pytesseract.TesseractNotFoundError:
             warnings.append("Tesseract OCR is not installed or not available in PATH.")
         except Exception as exc:
@@ -89,7 +160,6 @@ def extract_bill_text(file_path: str, file_type: str) -> tuple[str, list[str]]:
 
     warnings.append(f"Unsupported bill file type: {ext}")
     return "", warnings
-
 
 def parse_hotel_bill(file_path: str, file_type: str) -> ParsedHotelBill:
     raw_text, warnings = extract_bill_text(file_path, file_type)
@@ -100,19 +170,22 @@ def parse_hotel_bill(file_path: str, file_type: str) -> ParsedHotelBill:
     if not lines:
         return parsed
 
+    # Auto-classify category based on raw text
+    parsed.category = classify_bill_category(text)
+
     parsed.vendor_gstin = _first_match(GSTIN_RE, text)
     parsed.invoice_number = _find_labeled_text(
         lines,
-        ("invoice no", "invoice number", "bill no", "bill number", "receipt no", "folio no"),
+        ("invoice no", "invoice number", "bill no", "bill number", "receipt no", "folio no", "बिल नंबर", "रसीद"),
     )
-    parsed.invoice_date = _find_labeled_date(lines, ("invoice date", "bill date", "receipt date", "date"))
-    parsed.checkin_date = _find_labeled_date(lines, ("check in", "check-in", "arrival", "arrival date"))
-    parsed.checkout_date = _find_labeled_date(lines, ("check out", "check-out", "departure", "departure date"))
-    parsed.hotel_name = _find_hotel_name(lines)
+    parsed.invoice_date = _find_labeled_date(lines, ("invoice date", "bill date", "receipt date", "date", "दिनांक", "तारीख"))
+    parsed.checkin_date = _find_labeled_date(lines, ("check in", "check-in", "arrival", "arrival date", "आगमन"))
+    parsed.checkout_date = _find_labeled_date(lines, ("check out", "check-out", "departure", "departure date", "प्रस्थान"))
+    parsed.hotel_name = _find_hotel_name(lines, parsed.category)
     parsed.city = _find_city(text)
 
-    total = _find_labeled_amount(lines, ("grand total", "net amount", "amount payable", "total amount", "total"))
-    gst_amount = _sum_labeled_amounts(lines, ("cgst", "sgst", "igst", "tax amount", "gst amount"))
+    total = _find_labeled_amount(lines, ("grand total", "net amount", "amount payable", "total amount", "total", "कुल", "भुगतान"))
+    gst_amount = _sum_labeled_amounts(lines, ("cgst", "sgst", "igst", "tax amount", "gst amount", "जीएसटी", "कर"))
     room_amount = _find_labeled_amount(lines, ("room tariff", "room rent", "room rent total", "room charges", "lodging", "accommodation"))
     food_amount = _find_labeled_amount(lines, ("food", "restaurant", "boarding", "meal", "breakfast"))
 
@@ -139,6 +212,9 @@ def parse_hotel_bill(file_path: str, file_type: str) -> ParsedHotelBill:
         parsed.checkout_date = parsed.checkin_date + timedelta(days=1)
 
     return parsed
+
+
+parse_bill = parse_hotel_bill
 
 
 def _normalize_text(text: str) -> str:
@@ -203,13 +279,22 @@ def _parse_first_date(text: str) -> Optional[date]:
     return None
 
 
-def _find_hotel_name(lines: list[str]) -> str:
-    ignore = ("tax invoice", "invoice", "receipt", "gstin", "original", "duplicate")
-    hotel_terms = ("hotel", "residency", "inn", "lodge", "rooms", "resort", "guest house")
+def _find_hotel_name(lines: list[str], category: str = "hotel") -> str:
+    ignore = ("tax invoice", "invoice", "receipt", "gstin", "original", "duplicate", "bill", "cash memo")
+    
+    # Select keywords based on category
+    if category == "hotel":
+        terms = ("hotel", "residency", "inn", "lodge", "rooms", "resort", "guest house", "होटल", "लॉज", "गेस्ट हाउस")
+    elif category == "travel":
+        terms = ("railway", "irctc", "indigo", "air", "travel", "transport", "bus", "tours", "यात्रा", "परिवहन", "टूर")
+    elif category == "local":
+        terms = ("ola", "uber", "taxi", "cab", "metro", "transport", "ऑटो", "टैक्सी")
+    else:
+        terms = ("hotel", "residency", "inn", "lodge", "rooms", "resort", "guest house", "store", "mart", "restaurant", "cafe", "dhaba", "canteen")
 
     for index, line in enumerate(lines[:25]):
         lower = line.lower()
-        if any(term in lower for term in hotel_terms) and not any(term in lower for term in ignore):
+        if any(term in lower for term in terms) and not any(term in lower for term in ignore):
             if "lodging" in lower and index > 0:
                 candidate = _find_nearby_business_name(lines[max(index - 6, 0):index])
                 if candidate:
@@ -221,7 +306,6 @@ def _find_hotel_name(lines: list[str]) -> str:
         if not any(term in lower for term in ignore) and len(line) > 3:
             return _clean_name(line)
     return ""
-
 
 def _find_nearby_business_name(lines: list[str]) -> str:
     blocked = ("road", "highway", "towards", "ph-", "mob", "email", "@", "www", "gst", "invoice")

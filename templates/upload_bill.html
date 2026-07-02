@@ -11,9 +11,11 @@
         <div class="mb-4">
             <label class="form-label" style="font-size:0.85rem;font-weight:600;">Bill Category</label>
             <select name="bill_category" class="form-select" required>
-                <option value="hotel">Hotel</option>
-                <option value="travel">Travel</option>
-                <option value="other">Other</option>
+                <option value="auto" selected>Auto-Detect Category (Recommended)</option>
+                <option value="hotel">Hotel Stay</option>
+                <option value="travel">Travel Leg (Train/Flight/Bus)</option>
+                <option value="local">Local Conveyance (Ola/Uber/Cab/Auto)</option>
+                <option value="other">Other / Miscellaneous</option>
             </select>
         </div>
 
@@ -25,7 +27,7 @@
                     <strong>Click to browse</strong> or drag &amp; drop your bill here
                 </div>
                 <div class="dropzone-filename" id="billFileName" style="display:none;"></div>
-                <input type="file" name="file" id="billFileInput" required
+                <input type="file" name="file" id="billFileInput" multiple required
                        style="position:absolute;inset:0;opacity:0;cursor:pointer;">
             </div>
         </div>
@@ -53,7 +55,7 @@
         </div>
 
         <small class="text-tertiary" style="display:block;margin-bottom:16px;">
-            Upload a scanned bill or receipt. Fields may be auto-filled from OCR if available.
+            Upload one or more scanned bills, receipts, or tickets. Tesseract OCR will automatically extract details and categorize each file.
         </small>
 
         <button type="submit" class="btn btn-primary" id="saveBillBtn">Save Bill</button>
@@ -96,14 +98,19 @@
     fileInput.addEventListener('change', updateFileState);
 
     function updateFileState() {
-        if (fileInput.files.length > 0) {
-            fileName.textContent = fileInput.files[0].name;
+        const count = fileInput.files.length;
+        if (count > 0) {
+            if (count === 1) {
+                fileName.textContent = fileInput.files[0].name;
+            } else {
+                const names = Array.from(fileInput.files).map(f => f.name).join(", ");
+                fileName.textContent = `${count} files selected: ${names}`;
+            }
             fileName.style.display = 'block';
         } else {
             fileName.style.display = 'none';
         }
     }
-
 })();
 </script>
 {% endblock %}

@@ -62,6 +62,8 @@
         {% endif %}
         {% if day.record %}
         <a href="/attendance/edit/{{ day.record.id }}" class="day-edit btn btn-ghost btn-sm">&#9998;</a>
+        {% else %}
+        <a href="/attendance/add/{{ diary.id }}?date={{ day.date }}" class="day-edit btn btn-ghost btn-sm" title="Add attendance for this day">&#43;</a>
         {% endif %}
     </div>
     {% else %}

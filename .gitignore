@@ -5,3 +5,7 @@ __pycache__/
 .env
 audit_diary.db
 *.db
+venv/
+.venv/
+*.xlsx
+!template.xlsx
