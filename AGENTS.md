@@ -2,13 +2,15 @@
 
 ## Project Overview
 
-**Audit Diary System** is a web-based Monthly Diary & TA Bill management system for bank auditors. It allows staff to:
-- Upload and parse WhatsApp attendance messages.
-- Log daily and monthly expenses (travel, hotel stays, local conveyance, other expenses).
-- Upload and parse digital invoices/receipts (via OCR).
-- Generate monthly Diary-cum-TA Bill reports (both standard and HRMS formats) using pre-formatted Excel templates.
+**Audit Diary System** is a web-based Monthly Diary & Travel Allowance (TA) Bill management system for bank auditors. It allows staff to:
+- Upload and parse WhatsApp attendance logs.
+- Log monthly diary expenses (travel, hotel stays, local conveyance, other expenses).
+- Upload and parse digital invoices/receipts using Optical Character Recognition (OCR) or PDF extraction.
+- Generate monthly Diary-cum-TA Bill reports (standard Excel and HRMS formats) using pre-formatted Excel templates.
 
-The application is built on FastAPI, rendering server-side Jinja2 templates styled with Bootstrap 5.3 and custom CSS, and uses HTMX for asynchronous dynamic updates. Authentication is handled via Google Sign-In (Firebase Auth), and data is stored in a local SQLite database.
+The application is built on FastAPI, serving Jinja2 templates styled with Bootstrap 5.3 and custom CSS, and utilizes HTMX for asynchronous dynamic updates. Authentication is handled via Google Sign-In linked to Firebase Auth, and database state is managed in a local SQLite database.
+
+---
 
 ## Architecture & Data Flow
 
@@ -60,6 +62,8 @@ graph TD
    - Column dimensions are dynamically autofitted (capped between 11 and 28 characters wide).
    - Print configurations are set to A4 paper, fit-to-width scaling, and horizontal centering.
 
+---
+
 ## Key Directories
 
 | Path | Purpose |
@@ -73,6 +77,8 @@ graph TD
 | `templates/` | Jinja2 templates (divided by resource: list, add, edit templates and layout base). |
 | `static/` | Static assets, including the CSS design system (`style.css`). |
 | `uploads/` | Staging directories for uploaded WhatsApp texts, digital bills, and generated reports. |
+
+---
 
 ## Development Commands
 
@@ -126,6 +132,8 @@ conn.close()
 sudo bash deploy.sh
 ```
 
+---
+
 ## Code Conventions & Common Patterns
 
 ### 1. Router Pattern
@@ -141,7 +149,7 @@ def list_items(request: Request, diary_id: int, db: Session = Depends(get_db)):
     diary = db.query(MonthlyDiary).filter(MonthlyDiary.id == diary_id, MonthlyDiary.user_id == user.id).first()
     if not diary:
         raise HTTPException(status_code=404)
-        
+
     items = db.query(ExpenseModel).filter(ExpenseModel.diary_id == diary_id).all()
     return templates.TemplateResponse("list_items.html", {
         "request": request, "user": user, "items": items, "diary": diary
@@ -156,7 +164,7 @@ Defined in `routers/auth.py`:
 - `super_admin_required(request, db)`: Grants access only to staff number `"861198"`.
 - `permission_required("perm_name")`: Validates that `User.admin_permissions` contains the specified permission flag.
 
-### 3. CRUD URL Naming conventions
+### 3. CRUD URL Naming Conventions
 Uniformly structured URLs for expense submodules:
 1. `GET /list/{diary_id}` - Renders list view template.
 2. `GET /add/{diary_id}` - Renders add form template.
@@ -168,7 +176,7 @@ Uniformly structured URLs for expense submodules:
 ### 4. Database Lifecycle & Schema Design
 - **Session Lifecycle**: Database sessions are opened and closed per request by FastAPI (`Depends(get_db)`).
 - **Constraints**: Enforced via SQLite unique indices (e.g., `UniqueConstraint("user_id", "month", "year")` on MonthlyDiary).
-- **Cascades**: Deletion cascades are enabled at the database schema level. Deleting a `MonthlyDiary` automatically deletes child legs, stays, conveyance, and bills.
+- **Cascades**: Deletion cascades are enabled at the database schema level. Deleting a `MonthlyDiary` Gen-Cascades child legs, stays, conveyance, and bills.
 
 ### 5. Form Handling
 - No Pydantic schema validation is used for request bodies in POST routes. FastAPI `Form(...)` is used directly.
@@ -183,6 +191,11 @@ Key Design System variables:
 --bg-main: #f8fafc;      /* Light page background */
 ```
 
+### 7. HTMX Interactions
+HTMX is loaded globally in `base.html` for asynchronous element-based updates. Routes returning partial templates must check `HX-Request` headers or follow HTMX-specific patterns to update specific nodes.
+
+---
+
 ## Important Files
 
 | File Path | Role / Importance |
@@ -190,29 +203,46 @@ Key Design System variables:
 | `main.py` | App bootstrap, middleware setup, router attachments, database migrations. |
 | `config.py` | Configuration settings class, default parameters, state codes, and allowances. |
 | `database/models.py` | Contains all 9 SQLAlchemy ORM schemas: `User`, `MonthlyDiary`, `AttendanceRecord`, `Bill`, `TravelLeg`, `HotelStay`, `LocalConveyance`, `OtherExpense`, `Holiday`. |
-| `routers/auth.py` | Core security gate, cookie handling, and token management. |
-| `services/whatsapp_parser.py` | Parses raw chat transcripts; complex text parsing regex routines. |
-| `services/bill_parser.py` | OCR and PDF parser orchestrator for invoice uploading. |
-| `generators/diary_excel.py` | Writes user diary outputs to `template.xlsx` using `openpyxl`. |
+| `database/db.py` | SQLite database connection initialization and `get_db` session generator. |
+| `routers/auth.py` | Core security gate, cookie handling, Google OAuth verification, and token management. |
+| `services/whatsapp_parser.py` | Parses raw chat transcripts matching dates, branches, leaf codes using regex routines. |
+| `services/bill_parser.py` | OCR and PDF parser orchestrator for invoice uploading utilizing Tesseract and Pillow. |
+| `services/firebase_service.py` | Handles initialization of Firebase Admin SDK and maps user links in Firestore. |
+| `services/calendar_utils.py` | Resolves bank holidays, Maharashtra public holidays, and weekend structures. |
+| `generators/diary_excel.py` | Writes user diary outputs to `template.xlsx` utilizing `openpyxl`. |
 | `templates/base.html` | Base layout containing head tags, the responsive sidebar, and notification toast handlers. |
 | `template.xlsx` | The baseline blank Excel sheet loaded as the starting template for file generation. |
+
+---
 
 ## Runtime/Tooling Preferences
 
 - **Runtime**: Python 3.10+ is strictly required. No Node/Bun package management (pure Python project).
-- **Database Engine**: SQLite exclusively (`audit_diary.db`).
+- **Database Engine**: SQLite exclusively (`audit_diary.db`), configured locally.
 - **Dependencies**:
   - `openpyxl==3.1.2` for spreadsheet operations.
   - `pytesseract==0.3.10` and `pdfplumber==0.11.0` for text and bill extraction. Requires system-installed binary for Tesseract OCR.
-  - `firebase-admin>=6.0.0` for admin auth integrations. Requires service account JSON file in root.
+  - `firebase-admin>=6.0.0` for admin auth integrations. Requires service account JSON file in root (`firebase-service-account.json`).
+- **Configuration & Environment Variables**:
+  Managed via `config.py` parsing `.env` overrides:
+  - `SECRET_KEY`, `ALGORITHM` (JWT structure), `ACCESS_TOKEN_EXPIRE_MINUTES`.
+  - `DATABASE_URL` (database destination path).
+  - `OCR_TESSERACT_CMD` (system path pointer to Tesseract executable).
+- **Firebase Firestore Mapping Path**:
+  - Custom user verification documents exist under store path: `user_links/{google_uid}` containing `staff_no`, `mobile`, `is_admin`, `linked_email`, and timestamps.
 - **Port Mapping**: Defaults to `9931` for local development.
+
+---
 
 ## Testing & QA
 
 - **No Integrated Test Framework**: There is no standard runner (like `pytest` or `unittest`) configured.
 - **Verification Scripts**: Verification is handled via manual, standalone scripts:
-  - `test_parse.py`: Validates WhatsApp parser regex logic.
-  - `_t.py`: Exercises `generators/diary_excel.py` with mock entities and checks sheet formula validity.
-  - `inspect_template*.py` (1 to 4): Audits `template.xlsx` workbook structure, formulas, and cells via openpyxl.
-  - `_check_db.py`: Inspects SQLite database out-of-band.
-- **Verification Priority**: When modifying services, run the respective test script (`test_parse.py` for parsers, `_t.py` for excel logic) and ensure output calculations remain correct.
+  - `test_parse.py`: Validates WhatsApp parser regex logic against sample transcripts.
+  - `_t.py`: Exercises `generators/diary_excel.py` using mock database entries. It generates a temporary `_t.xlsx` file, checks sheet formula validity, audits for circular references, and cleans up the generated assets on completion.
+  - `inspect_template*.py` (1 to 4): Audits `template.xlsx` workbook structure, formulas, columns, merged cells, header layout structures, and row bounds.
+  - `_check_db.py`: Quick manual command utility inspecting SQLite columns and user table mapping records.
+- **Verification Priority**: When modifying service components or parser models, execute the corresponding audit scripts manually:
+  - For Excel generation updates: run `python _t.py` and inspect console outputs.
+  - For parsing updates: run `python test_parse.py`.
+  - For template-level changes: execute `python inspect_template.py` to ensure cell structures and calculated formulas remain valid.
